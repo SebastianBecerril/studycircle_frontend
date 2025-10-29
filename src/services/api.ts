@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Create an axios instance with default configuration
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api', // Replace with your backend API URL
+  baseURL: '/api', // Use Vite proxy to avoid CORS issues
   timeout: 10000, // 10 seconds timeout
   headers: {
     'Content-Type': 'application/json',
