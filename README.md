@@ -1,6 +1,16 @@
 # StudyCircle Frontend
 
-A modern Vue.js 3 application built with TypeScript and Vite.
+## User Journey
+A user is starting their college semester, and they want to figure out which of the people in their fraternity are taking the same classes as they are so they can set up a study group. The user opens our app on their laptop and signs up on StudyCircle by creating a profile. WIth their profile created, they now want to create a community for all their fraternity members to join. They go to the 'Communities' tab and click on 'Create Community'. They enter the community details, create, and join their community. (This up to the part I was able to do, I ran into many struggles with coding the frontend).
+
+After creating their community, their fraternity member shsould also be able to join. With that set up, the user can enter their classes, with their respective visiility settings, in order to share their schedule with their peers. Having this in place, the user can go to the 'Community Board' tab, and make a post looking for study buddies.
+
+
+## Video
+
+[StudyCircle Frontend Demo](StudyCirclFrontend.mp4)
+
+---
 
 ## Features
 
