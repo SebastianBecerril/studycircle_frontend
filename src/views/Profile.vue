@@ -256,16 +256,107 @@
             </form>
           </div>
         </div>
+
+        <!-- Profile Stats & Context -->
+        <div class="profile-stats-section">
+          <h2 class="section-title">Your StudyCircle</h2>
+          
+          <!-- Quick Stats -->
+          <div class="quick-stats">
+            <div class="stat-card">
+              <div class="stat-icon">📚</div>
+              <div class="stat-content">
+                <div class="stat-value">{{ myEnrollments.length }}</div>
+                <div class="stat-label">Classes</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">👥</div>
+              <div class="stat-content">
+                <div class="stat-value">{{ myCommunities.length }}</div>
+                <div class="stat-label">Communities</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Your Classes List -->
+          <div class="context-section">
+            <h3 class="subsection-title">📚 Your Classes</h3>
+            
+            <div v-if="enrollmentsLoading" class="context-loading">
+              <div class="loading-spinner small"></div>
+              <p>Loading classes...</p>
+            </div>
+            
+            <div v-else-if="myEnrollments.length === 0" class="empty-context">
+              <p>You haven't added any classes yet.</p>
+              <router-link to="/courses" class="context-link">Browse Courses →</router-link>
+            </div>
+            
+            <div v-else class="classes-grid">
+              <div v-for="enrollment in myEnrollments" :key="enrollment._id" class="class-item">
+                <div class="class-header">
+                  <h4 class="class-code">{{ enrollment.course }}</h4>
+                  <span class="class-term">{{ enrollment.term }}</span>
+                </div>
+                <p class="class-section">Section {{ enrollment.section }}</p>
+                <div v-if="enrollment.meetingTime" class="class-time">
+                  <span class="time-icon">🕒</span>
+                  {{ enrollment.meetingTime }}
+                </div>
+                <div v-if="enrollment.location" class="class-location">
+                  <span class="location-icon">📍</span>
+                  {{ enrollment.location }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Your Communities List -->
+          <div class="context-section">
+            <h3 class="subsection-title">👥 Your Communities</h3>
+            
+            <div v-if="communitiesLoading" class="context-loading">
+              <div class="loading-spinner small"></div>
+              <p>Loading communities...</p>
+            </div>
+            
+            <div v-else-if="myCommunities.length === 0" class="empty-context">
+              <p>You're not part of any communities yet.</p>
+              <router-link to="/communities" class="context-link">Explore Communities →</router-link>
+            </div>
+            
+            <div v-else class="communities-list">
+              <router-link 
+                v-for="community in myCommunities" 
+                :key="community._id"
+                :to="`/community/${community._id}`"
+                class="community-item"
+              >
+                <div class="community-info">
+                  <h4 class="community-name">{{ community.name }}</h4>
+                  <p v-if="community.description" class="community-description">
+                    {{ truncate(community.description, 80) }}
+                  </p>
+                  <div class="community-meta">
+                    <span class="member-count">{{ community.members?.length || 0 }} members</span>
+                  </div>
+                </div>
+                <div class="community-arrow">→</div>
+              </router-link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useStores } from '@/composables/useStores'
 
-const { auth, userProfile } = useStores()
+const { auth, userProfile, userEnrollments, community } = useStores()
 
 const isLoading = ref(true)
 const error = ref('')
@@ -277,6 +368,9 @@ const showEditName = ref(false)
 const showEditBio = ref(false)
 const showEditAvatar = ref(false)
 
+const enrollmentsLoading = ref(false)
+const communitiesLoading = ref(false)
+
 const createForm = ref({
   displayName: ''
 })
@@ -284,6 +378,26 @@ const createForm = ref({
 const editNameForm = ref('')
 const editBioForm = ref('')
 const editAvatarForm = ref('')
+
+// Computed properties for user's enrollments and communities
+const myEnrollments = computed(() => {
+  if (!auth.userId) return []
+  return userEnrollments.enrollments.filter(e => e.owner === auth.userId)
+})
+
+const myCommunities = computed(() => {
+  if (!auth.userId) return []
+  return community.communities.filter(c => 
+    c.members && c.members.includes(auth.userId)
+  )
+})
+
+// Utility function to truncate text
+const truncate = (text: string, maxLength: number) => {
+  if (!text) return ''
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength).trim() + '...'
+}
 
 const getInitials = (name: string) => {
   if (!name) return '?'
@@ -308,12 +422,43 @@ const fetchData = async () => {
       return
     }
 
+    // Fetch profile
     await userProfile.fetchProfileByUser(auth.userId)
+    
+    // Fetch enrollments and communities in parallel
+    await Promise.all([
+      fetchEnrollments(),
+      fetchCommunities()
+    ])
   } catch (err: any) {
     console.error('Error loading profile:', err)
     error.value = err.message || 'Failed to load profile'
   } finally {
     isLoading.value = false
+  }
+}
+
+const fetchEnrollments = async () => {
+  try {
+    enrollmentsLoading.value = true
+    if (auth.userId) {
+      await userEnrollments.fetchEnrollmentsByOwner(auth.userId)
+    }
+  } catch (err: any) {
+    console.error('Error loading enrollments:', err)
+  } finally {
+    enrollmentsLoading.value = false
+  }
+}
+
+const fetchCommunities = async () => {
+  try {
+    communitiesLoading.value = true
+    await community.fetchAllCommunities()
+  } catch (err: any) {
+    console.error('Error loading communities:', err)
+  } finally {
+    communitiesLoading.value = false
   }
 }
 
@@ -1025,6 +1170,264 @@ onMounted(() => {
   margin: 0.5rem 0 0 0;
 }
 
+/* Profile Stats Section */
+.profile-stats-section {
+  margin-top: 3rem;
+}
+
+.section-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #7c2d12;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+}
+
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
+  border: 2px solid #e7e5e4;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-family: 'Sora', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78716c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Context Sections */
+.context-section {
+  margin-bottom: 2rem;
+}
+
+.subsection-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1c1917;
+  margin: 0 0 1rem 0;
+}
+
+.context-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  justify-content: center;
+  color: #78716c;
+}
+
+.loading-spinner.small {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+}
+
+.empty-context {
+  text-align: center;
+  padding: 2rem;
+  background: #fafaf9;
+  border: 2px dashed #e7e5e4;
+  border-radius: 12px;
+  color: #78716c;
+}
+
+.empty-context p {
+  margin: 0 0 1rem 0;
+}
+
+.context-link {
+  color: #1e3a8a;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.context-link:hover {
+  color: #7c2d12;
+  transform: translateX(4px);
+}
+
+/* Classes Grid */
+.classes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.class-item {
+  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
+  border: 2px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.class-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  border-color: #7c2d12;
+}
+
+.class-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.class-code {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0;
+}
+
+.class-term {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.class-section {
+  font-size: 0.9375rem;
+  color: #57534e;
+  margin: 0 0 0.75rem 0;
+  font-weight: 600;
+}
+
+.class-time,
+.class-location {
+  font-size: 0.875rem;
+  color: #78716c;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+}
+
+.time-icon,
+.location-icon {
+  font-size: 1rem;
+}
+
+/* Communities List */
+.communities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.community-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
+  border: 2px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.community-item:hover {
+  transform: translateX(8px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  border-color: #7c2d12;
+}
+
+.community-info {
+  flex: 1;
+}
+
+.community-name {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0 0 0.5rem 0;
+}
+
+.community-description {
+  font-size: 0.9375rem;
+  color: #57534e;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.5;
+}
+
+.community-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #78716c;
+}
+
+.member-count {
+  font-weight: 600;
+}
+
+.community-arrow {
+  font-size: 1.5rem;
+  color: #7c2d12;
+  font-weight: 700;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.community-item:hover .community-arrow {
+  transform: translateX(4px);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .profile-page {
@@ -1059,6 +1462,22 @@ onMounted(() => {
   .form-actions .submit-btn,
   .cancel-btn {
     width: 100%;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+  }
+
+  .subsection-title {
+    font-size: 1.25rem;
+  }
+
+  .quick-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .classes-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

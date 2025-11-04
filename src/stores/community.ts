@@ -267,6 +267,34 @@ export const useCommunityStore = defineStore('community', () => {
     }
   }
 
+  const updateCommunityDetails = async (
+    communityId: string, 
+    newName: string, 
+    newDescription: string, 
+    requesterId: string
+  ) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await studyCircleApi.updateCommunityDetails(communityId, newName, newDescription, requesterId)
+      console.log('Community details updated successfully')
+      
+      // Update in store
+      updateCommunity(communityId, {
+        name: newName,
+        description: newDescription
+      })
+      
+      return true
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to update community')
+      console.error('Error updating community:', err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const clearError = () => {
     setError(null)
   }
@@ -300,10 +328,12 @@ export const useCommunityStore = defineStore('community', () => {
     
     // API Actions
     fetchCommunities,
+    fetchAllCommunities: fetchCommunities, // Alias for convenience
     fetchMemberships,
     createCommunity,
     joinCommunity,
     leaveCommunity,
+    updateCommunityDetails,
     clearError
   }
 })

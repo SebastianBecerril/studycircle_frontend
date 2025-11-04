@@ -312,6 +312,36 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     }
   }
 
+  const deletePostAction = async (postId: string, requesterId: string) => {
+    setError(null)
+    try {
+      await studyCircleApi.deletePost(postId, requesterId)
+      console.log('Post deleted successfully')
+      
+      // Remove from store
+      removePost(postId)
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to delete post')
+      console.error('Error deleting post:', err)
+      throw err
+    }
+  }
+
+  const deleteReplyAction = async (replyId: string, requesterId: string) => {
+    setError(null)
+    try {
+      await studyCircleApi.deleteReply(replyId, requesterId)
+      console.log('Reply deleted successfully')
+      
+      // Remove from store
+      removeReply(replyId)
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to delete reply')
+      console.error('Error deleting reply:', err)
+      throw err
+    }
+  }
+
   return {
     // State
     posts,
@@ -348,6 +378,8 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     createPost,
     createReply,
     updatePostAction,
-    updateReplyAction
+    updateReplyAction,
+    deletePostAction,
+    deleteReplyAction
   }
 })

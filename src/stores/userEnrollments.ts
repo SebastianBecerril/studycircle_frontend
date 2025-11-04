@@ -166,6 +166,48 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     }
   }
 
+  const deleteEnrollment = async (enrollmentId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await studyCircleApi.removeEnrollment(enrollmentId)
+      console.log('Enrollment deleted successfully')
+      removeEnrollment(enrollmentId)
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to delete enrollment')
+      console.error('Error deleting enrollment:', err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleEnrollmentVisibility = async (enrollmentId: string, newVisibility: boolean) => {
+    setError(null)
+    try {
+      await studyCircleApi.setEnrollmentVisibility(enrollmentId, newVisibility)
+      console.log('Enrollment visibility updated')
+      updateEnrollmentVisibility(enrollmentId, newVisibility)
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to update visibility')
+      console.error('Error updating visibility:', err)
+      throw err
+    }
+  }
+
+  const changeCourseSection = async (enrollmentId: string, newSectionId: string) => {
+    setError(null)
+    try {
+      await studyCircleApi.updateCourseSection(enrollmentId, newSectionId)
+      console.log('Enrollment section updated')
+      updateEnrollmentSection(enrollmentId, newSectionId)
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to update section')
+      console.error('Error updating section:', err)
+      throw err
+    }
+  }
+
   return {
     // State
     enrollments,
@@ -196,6 +238,9 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     // API Actions
     fetchEnrollmentsByOwner,
     fetchAndMergeEnrollmentsByOwner,
-    createEnrollment
+    createEnrollment,
+    deleteEnrollment,
+    toggleEnrollmentVisibility,
+    changeCourseSection
   }
 })

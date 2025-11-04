@@ -193,11 +193,154 @@
 
       <!-- Calendar View -->
       <div v-else class="calendar-view">
-        <div class="coming-soon-card">
-          <div class="calendar-icon">📅</div>
-          <h2>Calendar View Coming Soon</h2>
-          <p>We're working on a visual weekly calendar to see time overlaps at a glance!</p>
-          <button @click="currentView = 'list'" class="switch-view-btn">View List for Now</button>
+        <!-- Stats Summary -->
+        <div class="stats-summary">
+          <div class="stat-item">
+            <span class="stat-number">{{ uniqueClassesCount }}</span>
+            <span class="stat-label">Your Classes</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ totalClassmates }}</span>
+            <span class="stat-label">Classmates</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ sharedClassesCount }}</span>
+            <span class="stat-label">Shared Classes</span>
+          </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="calendar-container">
+          <div class="calendar-grid">
+            <!-- Time column -->
+            <div class="time-column">
+              <div class="time-header"></div>
+              <div
+                v-for="hour in timeSlots"
+                :key="hour"
+                class="time-slot"
+              >
+                {{ formatHour(hour) }}
+              </div>
+            </div>
+
+            <!-- Day columns -->
+            <div
+              v-for="day in weekDays"
+              :key="day.key"
+              class="day-column"
+            >
+              <div class="day-header">
+                <div class="day-name">{{ day.name }}</div>
+                <div class="day-abbr">{{ day.abbr }}</div>
+              </div>
+
+              <div class="day-grid">
+                <!-- Time slot backgrounds -->
+                <div
+                  v-for="hour in timeSlots"
+                  :key="hour"
+                  class="time-slot-bg"
+                ></div>
+
+                <!-- Classes for this day -->
+                <div
+                  v-for="classItem in getClassesForDay(day.key)"
+                  :key="classItem.id"
+                  class="calendar-class"
+                  :class="{
+                    'has-classmates': classItem.classmateCount > 0,
+                    'my-class': true,
+                    'selected': selectedClass && selectedClass.id === classItem.id
+                  }"
+                  :style="getClassStyle(classItem)"
+                  @click.stop="selectClass(classItem)"
+                  @mouseenter="hoverClass = classItem"
+                  @mouseleave="hoverClass = null"
+                >
+                  <div class="class-content">
+                    <div class="class-time">{{ classItem.startTime }}-{{ classItem.endTime }}</div>
+                    <div class="class-code">{{ classItem.courseNumber }}</div>
+                    <div class="class-location">{{ classItem.location }}</div>
+                    <div v-if="classItem.classmateCount > 0" class="classmate-badge">
+                      {{ classItem.classmateCount }} {{ classItem.classmateCount === 1 ? 'classmate' : 'classmates' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="myCalendarClasses.length === 0" class="empty-calendar">
+          <div class="empty-icon">📅</div>
+          <h3>No Classes to Display</h3>
+          <p>Add your enrollments to see your weekly schedule!</p>
+          <router-link to="/courses" class="add-classes-btn">
+            Add Classes
+          </router-link>
+        </div>
+
+        <!-- Modal Tooltip for Selected Class (outside calendar grid) -->
+        <div v-if="selectedClass" class="class-modal-overlay" @click="selectedClass = null">
+          <div class="class-modal" @click.stop>
+            <div class="modal-header">
+              <strong>{{ selectedClass.courseNumber }}: {{ selectedClass.courseName }}</strong>
+              <button 
+                @click="selectedClass = null" 
+                class="modal-close"
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="modal-section">
+                <div class="modal-label">Time:</div>
+                <div>{{ selectedClass.days.join(', ') }} {{ selectedClass.startTime }}-{{ selectedClass.endTime }}</div>
+              </div>
+              <div class="modal-section">
+                <div class="modal-label">Location:</div>
+                <div>{{ selectedClass.location }}</div>
+              </div>
+              <div class="modal-section">
+                <div class="modal-label">Instructor:</div>
+                <div>{{ selectedClass.instructor }}</div>
+              </div>
+              <div class="modal-section">
+                <div class="modal-label">Type:</div>
+                <div>{{ selectedClass.classType }}</div>
+              </div>
+              <div v-if="selectedClass.classmates.length > 0" class="modal-section">
+                <div class="modal-label">
+                  {{ currentCommunity?.name }} Members ({{ selectedClass.classmates.length }}):
+                </div>
+                <div class="classmates-list">
+                  <div
+                    v-for="classmate in selectedClass.classmates"
+                    :key="classmate"
+                    class="classmate-chip-small"
+                  >
+                    <div class="classmate-avatar-small">
+                      <img 
+                        v-if="profileHelper.getAvatarUrl(classmate)" 
+                        :src="profileHelper.getAvatarUrl(classmate)!" 
+                        alt="Avatar"
+                      />
+                      <span v-else class="avatar-initials-small">
+                        {{ profileHelper.getInitials(profileHelper.getDisplayName(classmate)) }}
+                      </span>
+                    </div>
+                    <span class="classmate-name-small">{{ profileHelper.getDisplayName(classmate) }}</span>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="modal-section">
+                <div class="no-classmates-note">No community members in this section</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -363,6 +506,146 @@ const totalClassmates = computed(() => {
 const myCoursesCount = computed(() => {
   return courseGroups.value.filter(g => g.iAmTakingThis).length
 })
+
+// Calendar-specific state
+const hoverClass = ref<any>(null)
+const selectedClass = ref<any>(null)
+
+// Week days configuration
+const weekDays = [
+  { key: 'M', name: 'Monday', abbr: 'Mon' },
+  { key: 'T', name: 'Tuesday', abbr: 'Tue' },
+  { key: 'W', name: 'Wednesday', abbr: 'Wed' },
+  { key: 'R', name: 'Thursday', abbr: 'Thu' },
+  { key: 'F', name: 'Friday', abbr: 'Fri' }
+]
+
+// Time slots (8 AM to 10 PM)
+const timeSlots = Array.from({ length: 14 }, (_, i) => i + 8)
+
+// Get my classes formatted for calendar
+const myCalendarClasses = computed(() => {
+  const classes: any[] = []
+  
+  courseGroups.value.forEach(group => {
+    if (!group.iAmTakingThis) return
+    
+    group.sections.forEach((section: any) => {
+      if (!section.iAmInThisSection) return
+      
+      // Get classmates in this section (excluding me)
+      const classmates = section.students
+        .filter((s: any) => !s.isMe)
+        .map((s: any) => s.userId)
+      
+      section.days.forEach((day: string) => {
+        classes.push({
+          id: `${section.sectionId}-${day}`,
+          sectionId: section.sectionId,
+          day,
+          courseNumber: group.courseNumber,
+          courseName: group.courseName,
+          department: group.department,
+          term: group.term,
+          classType: section.classType,
+          days: section.days,
+          startTime: section.startTime,
+          endTime: section.endTime,
+          location: section.location,
+          instructor: section.instructor,
+          classmates,
+          classmateCount: classmates.length
+        })
+      })
+    })
+  })
+  
+  return classes
+})
+
+// Count unique classes (not day instances)
+const uniqueClassesCount = computed(() => {
+  const uniqueSections = new Set(
+    myCalendarClasses.value.map(c => c.sectionId)
+  )
+  return uniqueSections.size
+})
+
+// Count of shared classes (classes with at least one classmate)
+const sharedClassesCount = computed(() => {
+  const uniqueSections = new Set(
+    myCalendarClasses.value
+      .filter(c => c.classmateCount > 0)
+      .map(c => c.sectionId)
+  )
+  return uniqueSections.size
+})
+
+// Get classes for a specific day
+const getClassesForDay = (dayKey: string) => {
+  return myCalendarClasses.value.filter(c => c.day === dayKey)
+}
+
+// Parse time string - handles both "9:00 AM" and "14:30" formats
+const parseTime = (timeStr: string): number => {
+  if (!timeStr) return 0
+  
+  // Try 12-hour format first (e.g., "9:00 AM")
+  const match12hr = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
+  if (match12hr) {
+    let hour = parseInt(match12hr[1])
+    const minutes = parseInt(match12hr[2])
+    const period = match12hr[3].toUpperCase()
+    
+    if (period === 'PM' && hour !== 12) {
+      hour += 12
+    } else if (period === 'AM' && hour === 12) {
+      hour = 0
+    }
+    
+    return hour + minutes / 60
+  }
+  
+  // Try 24-hour format (e.g., "14:30")
+  const match24hr = timeStr.match(/(\d+):(\d+)/)
+  if (match24hr) {
+    const hour = parseInt(match24hr[1])
+    const minutes = parseInt(match24hr[2])
+    return hour + minutes / 60
+  }
+  
+  return 0
+}
+
+// Get CSS style for positioning a class on the grid
+const getClassStyle = (classItem: any) => {
+  const startHour = parseTime(classItem.startTime)
+  const endHour = parseTime(classItem.endTime)
+  const duration = endHour - startHour
+  
+  // Each hour is 60px
+  const hourHeight = 60
+  const top = (startHour - 8) * hourHeight
+  const height = duration * hourHeight
+  
+  return {
+    top: `${top}px`,
+    height: `${height}px`
+  }
+}
+
+// Format hour for display
+const formatHour = (hour: number): string => {
+  if (hour === 0 || hour === 24) return '12 AM'
+  if (hour === 12) return '12 PM'
+  if (hour < 12) return `${hour} AM`
+  return `${hour - 12} PM`
+}
+
+// Handle class selection
+const selectClass = (classItem: any) => {
+  selectedClass.value = selectedClass.value?.id === classItem.id ? null : classItem
+}
 
 // Watch course groups and fetch profiles for all students
 watch(courseGroups, async (groups) => {
@@ -1101,52 +1384,395 @@ onMounted(() => {
 /* Calendar View */
 .calendar-view {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40vh;
+  flex-direction: column;
+  gap: 2rem;
 }
 
-.coming-soon-card {
+.calendar-container {
+  background: white;
+  border: 2px solid #e7e5e4;
+  border-radius: 16px;
+  padding: 1.5rem;
+  overflow-x: auto;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(5, 1fr);
+  gap: 0;
+  min-width: 900px;
+}
+
+/* Time Column */
+.time-column {
+  display: flex;
+  flex-direction: column;
+  border-right: 2px solid #e7e5e4;
+}
+
+.time-header {
+  height: 60px;
+  border-bottom: 2px solid #e7e5e4;
+  background: #fafaf9;
+}
+
+.time-slot {
+  height: 60px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #78716c;
+  border-bottom: 1px solid #f5f5f4;
+}
+
+/* Day Columns */
+.day-column {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e7e5e4;
+}
+
+.day-column:last-child {
+  border-right: none;
+}
+
+.day-header {
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 2px solid #e7e5e4;
+  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
+}
+
+.day-name {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #1c1917;
+}
+
+.day-abbr {
+  font-size: 0.75rem;
+  color: #78716c;
+  font-weight: 500;
+}
+
+.day-grid {
+  position: relative;
+  flex: 1;
+}
+
+.time-slot-bg {
+  height: 60px;
+  border-bottom: 1px solid #f5f5f4;
+}
+
+/* Calendar Classes */
+.calendar-class {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 8px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  z-index: 10;
+  min-height: 60px; /* Ensure minimum height */
+}
+
+/* Remove debug banner */
+
+.calendar-class.has-classmates {
+  background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+  border-color: #7c2d12;
+  box-shadow: 0 4px 12px rgba(124, 45, 18, 0.3);
+}
+
+.calendar-class:hover {
+  z-index: 20;
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.calendar-class.has-classmates:hover {
+  box-shadow: 0 6px 20px rgba(124, 45, 18, 0.5);
+}
+
+.calendar-class.selected {
+  z-index: 30;
+  transform: scale(1.05);
+  box-shadow: 0 0 0 4px #1e3a8a, 0 8px 24px rgba(30, 58, 138, 0.4) !important;
+  animation: pulse-selection 0.5s ease;
+}
+
+.calendar-class.has-classmates.selected {
+  box-shadow: 0 0 0 4px #7c2d12, 0 8px 24px rgba(124, 45, 18, 0.4) !important;
+}
+
+@keyframes pulse-selection {
+  0%, 100% { transform: scale(1.05); }
+  50% { transform: scale(1.08); }
+}
+
+.class-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: #1c1917;
+}
+
+.calendar-class.has-classmates .class-content {
+  color: white;
+}
+
+.class-time {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.class-code {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.class-location {
+  font-size: 0.6875rem;
+  opacity: 0.8;
+}
+
+.classmate-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  margin-top: 0.125rem;
+  padding: 0.125rem 0.375rem;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+/* Class Modal Overlay */
+.class-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.class-modal {
+  background: white;
+  border: 3px solid #1e3a8a;
+  border-radius: 16px;
+  padding: 0;
+  min-width: 400px;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(145deg, #1e3a8a 0%, #1e40af 100%);
+  color: white;
+  border-radius: 13px 13px 0 0;
+}
+
+.modal-header strong {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-section {
+  margin-bottom: 1rem;
+  font-size: 0.9375rem;
+}
+
+.modal-section:last-child {
+  margin-bottom: 0;
+}
+
+.modal-label {
+  font-weight: 700;
+  color: #1c1917;
+  margin-bottom: 0.375rem;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-section > div {
+  color: #44403c;
+  line-height: 1.5;
+}
+
+.classmates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.classmate-chip-small {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  background: #fef3c7;
+  border-radius: 6px;
+}
+
+.classmate-avatar-small {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e7e5e4;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.classmate-avatar-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-initials-small {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #92400e;
+  font-family: 'Sora', sans-serif;
+}
+
+.classmate-name-small {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #1c1917;
+}
+
+.no-classmates-note {
+  color: #78716c;
+  font-style: italic;
+  font-size: 0.8125rem;
+  padding: 1rem;
+  background: #fafaf9;
+  border-radius: 8px;
   text-align: center;
+}
+
+/* Empty Calendar State */
+.empty-calendar {
+  text-align: center;
+  padding: 4rem 2rem;
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
   border: 2px solid #e7e5e4;
   border-radius: 16px;
-  padding: 4rem 3rem;
-  max-width: 500px;
 }
 
-.calendar-icon {
-  font-size: 5rem;
-  margin-bottom: 1.5rem;
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
 }
 
-.coming-soon-card h2 {
+.empty-calendar h3 {
   font-family: 'Sora', sans-serif;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #7c2d12;
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.5rem 0;
 }
 
-.coming-soon-card p {
-  font-size: 1.125rem;
+.empty-calendar p {
+  font-size: 1rem;
   color: #78716c;
-  margin: 0 0 2rem 0;
+  margin: 0 0 1.5rem 0;
 }
 
-.switch-view-btn {
+.add-classes-btn {
+  display: inline-block;
   padding: 0.875rem 2rem;
   background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
   color: white;
-  border: none;
+  text-decoration: none;
   border-radius: 12px;
   font-weight: 600;
-  cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
 }
 
-.switch-view-btn:hover {
+.add-classes-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
 }
@@ -1213,6 +1839,25 @@ onMounted(() => {
   .section-info {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .class-modal {
+    min-width: unset;
+    width: calc(100% - 2rem);
+    max-width: unset;
+    margin: 1rem;
+  }
+
+  .modal-header strong {
+    font-size: 1.125rem;
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+  }
+
+  .modal-section {
+    font-size: 0.875rem;
   }
 }
 </style>

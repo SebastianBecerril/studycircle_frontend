@@ -20,9 +20,19 @@
     <div v-else-if="currentCommunity" class="board-content">
       <!-- Header Section -->
       <div class="board-header">
-        <router-link to="/community" class="back-link">
-          ← Back to Communities
-        </router-link>
+        <div class="header-top">
+          <router-link to="/community" class="back-link">
+            ← Back to Communities
+          </router-link>
+          <button 
+            v-if="!isAdmin" 
+            @click="showLeaveConfirm = true" 
+            class="leave-community-btn"
+            title="Leave this community"
+          >
+            🚪 Leave Community
+          </button>
+        </div>
         
         <div class="header-content">
           <h1 class="community-title">{{ currentCommunity.name }}</h1>
@@ -44,9 +54,19 @@
       <!-- Navigation Tabs -->
       <div class="board-navigation">
         <div class="nav-tabs">
-          <button class="nav-tab active">
+          <button 
+            @click="currentTab = 'board'" 
+            :class="['nav-tab', { active: currentTab === 'board' }]"
+          >
             <span class="tab-icon">💬</span>
             Board
+          </button>
+          <button 
+            @click="currentTab = 'members'" 
+            :class="['nav-tab', { active: currentTab === 'members' }]"
+          >
+            <span class="tab-icon">👥</span>
+            Members
           </button>
           <router-link 
             :to="`/community/${communityId}/schedule`" 
@@ -58,8 +78,8 @@
         </div>
       </div>
 
-      <!-- Posts Section -->
-      <div class="posts-section">
+      <!-- Board Tab Content -->
+      <div v-if="currentTab === 'board'" class="posts-section">
         <div class="section-header">
           <h2>Community Board</h2>
           <button @click="showCreatePostForm = true" class="create-post-btn">
@@ -97,14 +117,22 @@
                   <span class="author-name">{{ profileHelper.getDisplayName(post.author) }}</span>
                 </div>
               </div>
-              <button 
-                v-if="post.author === auth.userId && !editingPost.has(post._id)"
-                @click="startEditPost(post)"
-                class="edit-post-btn"
-                title="Edit post"
-              >
-                ✏️
-              </button>
+              <div v-if="post.author === auth.userId && !editingPost.has(post._id)" class="post-actions">
+                <button 
+                  @click="startEditPost(post)"
+                  class="edit-post-btn"
+                  title="Edit post"
+                >
+                  ✏️
+                </button>
+                <button 
+                  @click="confirmDeletePost(post)"
+                  class="delete-post-btn"
+                  title="Delete post"
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
 
             <!-- Edit Post Form -->
@@ -259,14 +287,22 @@
                         <span class="reply-author-name">{{ profileHelper.getDisplayName(reply.author) }}</span>
                       </div>
                     </div>
-                    <button 
-                      v-if="reply.author === auth.userId && !editingReply.has(reply._id)"
-                      @click="startEditReply(reply)"
-                      class="edit-reply-btn"
-                      title="Edit reply"
-                    >
-                      ✏️
-                    </button>
+                    <div v-if="reply.author === auth.userId && !editingReply.has(reply._id)" class="reply-actions">
+                      <button 
+                        @click="startEditReply(reply)"
+                        class="edit-reply-btn"
+                        title="Edit reply"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        @click="confirmDeleteReply(reply)"
+                        class="delete-reply-btn"
+                        title="Delete reply"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                   
                   <!-- Edit Reply Form -->
@@ -314,6 +350,242 @@
           <div class="empty-icon">📝</div>
           <h3>No posts yet</h3>
           <p>Be the first to start a conversation in this community!</p>
+        </div>
+      </div>
+
+      <!-- Members Tab Content -->
+      <div v-if="currentTab === 'members'" class="members-section">
+        <div class="section-header">
+          <h2>Community Members</h2>
+          <button 
+            v-if="isAdmin" 
+            @click="showAddMemberForm = true" 
+            class="create-post-btn"
+          >
+            <span class="btn-icon">+</span>
+            Add Member
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loadingMembers" class="members-loading">
+          <div class="loading-spinner"></div>
+          <p>Loading members...</p>
+        </div>
+
+        <!-- Members List -->
+        <div v-else-if="memberProfiles.length > 0" class="members-grid">
+          <div 
+            v-for="member in memberProfiles" 
+            :key="member.userId"
+            class="member-card"
+          >
+            <div class="member-avatar-large">
+              <img 
+                v-if="member.profile?.thumbnailImageURL" 
+                :src="member.profile.thumbnailImageURL" 
+                alt="Avatar"
+              />
+              <span v-else class="avatar-initials-large">
+                {{ getInitials(member.profile?.displayName || 'Unknown') }}
+              </span>
+            </div>
+            <div class="member-info">
+              <h3 class="member-name">{{ member.profile?.displayName || 'Unknown User' }}</h3>
+              <p v-if="member.profile?.bio" class="member-bio">{{ member.profile.bio }}</p>
+              <p v-else class="member-bio no-bio">No bio added yet</p>
+              <div class="member-meta">
+                <span 
+                  v-if="member.membership?.role === 'ADMIN'" 
+                  class="role-badge admin"
+                >
+                  👑 Admin
+                </span>
+                <span v-else class="role-badge member">
+                  👤 Member
+                </span>
+                <span class="join-date">
+                  Joined {{ formatDate(member.membership?.joinDate || '') }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="empty-members">
+          <div class="empty-icon">👥</div>
+          <h3>No Members Yet</h3>
+          <p>This community doesn't have any members yet.</p>
+        </div>
+      </div>
+
+      <!-- Leave Community Confirmation Modal -->
+      <div v-if="showLeaveConfirm" class="modal-overlay" @click="cancelLeave">
+        <div class="modal-content small-modal" @click.stop>
+          <div class="modal-header leave-header">
+            <h2>⚠️ Leave Community?</h2>
+            <button @click="cancelLeave" class="close-btn">×</button>
+          </div>
+          
+          <div class="leave-modal-body">
+            <p class="leave-warning">Are you sure you want to leave <strong>{{ currentCommunity.name }}</strong>?</p>
+            <p class="leave-note">You will no longer have access to the community board, posts, and shared schedule.</p>
+            
+            <div v-if="leaveError" class="error-message">
+              {{ leaveError }}
+              <button type="button" @click="leaveError = ''" class="close-btn">×</button>
+            </div>
+            
+            <div class="leave-actions">
+              <button 
+                @click="cancelLeave" 
+                class="cancel-btn"
+                :disabled="leavingCommunity"
+              >
+                Cancel
+              </button>
+              <button 
+                @click="handleLeaveCommunity" 
+                class="leave-confirm-btn"
+                :disabled="leavingCommunity"
+              >
+                <span v-if="leavingCommunity" class="loading-spinner"></span>
+                <span v-else>Leave Community</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Member Modal -->
+      <div v-if="showAddMemberForm" class="modal-overlay" @click="closeAddMemberForm">
+        <div class="modal-content small-modal" @click.stop>
+          <div class="modal-header">
+            <h2>Add Member</h2>
+            <button @click="closeAddMemberForm" class="close-btn">×</button>
+          </div>
+          
+          <form @submit.prevent="handleAddMember" class="add-member-form">
+            <div class="form-group">
+              <label for="memberUserId">User ID</label>
+              <input
+                id="memberUserId"
+                v-model="addMemberForm.userId"
+                type="text"
+                required
+                placeholder="Enter user ID..."
+                class="form-input"
+              />
+              <span class="input-hint">Enter the ID of the user you want to add to this community</span>
+            </div>
+
+            <div v-if="addMemberError" class="error-message">
+              {{ addMemberError }}
+              <button type="button" @click="addMemberError = ''" class="close-btn">×</button>
+            </div>
+            
+            <div class="form-actions">
+              <button 
+                type="button" 
+                @click="closeAddMemberForm" 
+                class="cancel-btn"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                :disabled="addingMember || !addMemberForm.userId.trim()"
+                class="submit-btn"
+              >
+                <span v-if="addingMember" class="loading-spinner"></span>
+                <span v-else>Add Member</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Delete Post Confirmation Modal -->
+      <div v-if="showDeletePostConfirm" class="modal-overlay" @click="cancelDeletePost">
+        <div class="modal-content small-modal" @click.stop>
+          <div class="modal-header delete-header">
+            <h2>⚠️ Delete Post?</h2>
+            <button @click="cancelDeletePost" class="close-btn">×</button>
+          </div>
+          
+          <div class="delete-modal-body">
+            <p class="delete-warning">Are you sure you want to delete this post?</p>
+            <div class="delete-item-preview">
+              <strong>{{ postToDelete?.title }}</strong>
+              <p>{{ truncateText(postToDelete?.body || '', 100) }}</p>
+            </div>
+            <p class="delete-note">This action cannot be undone. All replies to this post will also be deleted.</p>
+            
+            <div v-if="deleteError" class="error-message">
+              {{ deleteError }}
+              <button type="button" @click="deleteError = ''" class="close-btn">×</button>
+            </div>
+            
+            <div class="delete-actions">
+              <button 
+                @click="cancelDeletePost" 
+                class="cancel-btn"
+                :disabled="deletingPost"
+              >
+                Cancel
+              </button>
+              <button 
+                @click="handleDeletePost" 
+                class="delete-confirm-btn"
+                :disabled="deletingPost"
+              >
+                <span v-if="deletingPost" class="loading-spinner"></span>
+                <span v-else>Delete Post</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Reply Confirmation Modal -->
+      <div v-if="showDeleteReplyConfirm" class="modal-overlay" @click="cancelDeleteReply">
+        <div class="modal-content small-modal" @click.stop>
+          <div class="modal-header delete-header">
+            <h2>⚠️ Delete Reply?</h2>
+            <button @click="cancelDeleteReply" class="close-btn">×</button>
+          </div>
+          
+          <div class="delete-modal-body">
+            <p class="delete-warning">Are you sure you want to delete this reply?</p>
+            <div class="delete-item-preview">
+              <p>{{ truncateText(replyToDelete?.body || '', 150) }}</p>
+            </div>
+            <p class="delete-note">This action cannot be undone.</p>
+            
+            <div v-if="deleteError" class="error-message">
+              {{ deleteError }}
+              <button type="button" @click="deleteError = ''" class="close-btn">×</button>
+            </div>
+            
+            <div class="delete-actions">
+              <button 
+                @click="cancelDeleteReply" 
+                class="cancel-btn"
+                :disabled="deletingReply"
+              >
+                Cancel
+              </button>
+              <button 
+                @click="handleDeleteReply" 
+                class="delete-confirm-btn"
+                :disabled="deletingReply"
+              >
+                <span v-if="deletingReply" class="loading-spinner"></span>
+                <span v-else>Delete Reply</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -398,11 +670,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useStores } from '@/composables/useStores'
 import { useProfileHelper } from '@/composables/useProfileHelper'
 
 const route = useRoute()
+const router = useRouter()
 const { community, communityBoard, auth } = useStores()
 const profileHelper = useProfileHelper()
 
@@ -414,6 +687,30 @@ const tagsInput = ref('')
 const expandedPosts = ref(new Set<string>())
 const loadingReplies = ref(new Set<string>())
 const replyingTo = ref(new Set<string>())
+
+// Members tab state
+const currentTab = ref<'board' | 'members'>('board')
+const showAddMemberForm = ref(false)
+const loadingMembers = ref(false)
+const addingMember = ref(false)
+const addMemberError = ref('')
+const addMemberForm = ref({
+  userId: ''
+})
+
+// Leave community state
+const showLeaveConfirm = ref(false)
+const leavingCommunity = ref(false)
+const leaveError = ref('')
+
+// Delete post/reply state
+const showDeletePostConfirm = ref(false)
+const showDeleteReplyConfirm = ref(false)
+const postToDelete = ref<any>(null)
+const replyToDelete = ref<any>(null)
+const deletingPost = ref(false)
+const deletingReply = ref(false)
+const deleteError = ref('')
 const submittingReply = ref(new Set<string>())
 const replyForms = ref<Record<string, string>>({})
 const replyErrors = ref<Record<string, string>>({})
@@ -439,6 +736,43 @@ const currentCommunity = computed(() => {
 
 const communityPosts = computed(() => {
   return communityBoard.postsByCommunity(communityId.value)
+})
+
+const communityMembers = computed(() => {
+  return community.communityMembers(communityId.value)
+})
+
+const isAdmin = computed(() => {
+  return community.isUserAdmin(communityId.value)
+})
+
+const memberProfiles = computed(() => {
+  return communityMembers.value.map(membership => {
+    const profile = profileHelper.getProfile(membership.user)
+    return {
+      userId: membership.user,
+      membership,
+      profile
+    }
+  })
+})
+
+// Watch tab changes to fetch members
+watch(currentTab, async (newTab) => {
+  if (newTab === 'members' && communityMembers.value.length > 0) {
+    loadingMembers.value = true
+    try {
+      // Fetch profiles for all members
+      const memberIds = communityMembers.value.map(m => m.user).filter(Boolean)
+      if (memberIds.length > 0) {
+        await profileHelper.fetchProfilesForUsers(memberIds)
+      }
+    } catch (err) {
+      console.error('Error fetching member profiles:', err)
+    } finally {
+      loadingMembers.value = false
+    }
+  }
 })
 
 // Watch posts and fetch profiles for authors
@@ -739,6 +1073,166 @@ const closeCreatePostForm = () => {
   communityBoard.clearError()
 }
 
+// Members functions
+const getInitials = (name: string) => {
+  if (!name) return '?'
+  const parts = name.trim().split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+  return name[0].toUpperCase()
+}
+
+const handleAddMember = async () => {
+  try {
+    addingMember.value = true
+    addMemberError.value = ''
+
+    if (!auth.userId) {
+      throw new Error('You must be logged in to add members')
+    }
+
+    const userId = addMemberForm.value.userId.trim()
+    if (!userId) {
+      throw new Error('Please enter a user ID')
+    }
+
+    console.log('Adding member:', userId, 'to community:', communityId.value)
+
+    // Add member to community
+    await community.joinCommunity(communityId.value, userId)
+
+    console.log('Member added successfully')
+    
+    // Refetch memberships to update the list
+    await community.fetchMemberships()
+    
+    closeAddMemberForm()
+  } catch (error: any) {
+    console.error('Failed to add member:', error)
+    addMemberError.value = error.response?.data?.error || error.message || 'Failed to add member'
+  } finally {
+    addingMember.value = false
+  }
+}
+
+const closeAddMemberForm = () => {
+  showAddMemberForm.value = false
+  addMemberForm.value = { userId: '' }
+  addMemberError.value = ''
+}
+
+// Leave community functions
+const handleLeaveCommunity = async () => {
+  try {
+    leavingCommunity.value = true
+    leaveError.value = ''
+
+    if (!auth.userId) {
+      throw new Error('You must be logged in to leave a community')
+    }
+
+    console.log('Leaving community:', communityId.value)
+
+    await community.leaveCommunity(communityId.value, auth.userId)
+
+    console.log('Successfully left community')
+    
+    // Redirect to communities page
+    router.push('/community')
+  } catch (error: any) {
+    console.error('Failed to leave community:', error)
+    leaveError.value = error.response?.data?.error || error.message || 'Failed to leave community'
+  } finally {
+    leavingCommunity.value = false
+  }
+}
+
+const cancelLeave = () => {
+  showLeaveConfirm.value = false
+  leaveError.value = ''
+}
+
+// Delete post/reply functions
+const truncateText = (text: string, maxLength: number) => {
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength) + '...'
+}
+
+const confirmDeletePost = (post: any) => {
+  postToDelete.value = post
+  showDeletePostConfirm.value = true
+  deleteError.value = ''
+}
+
+const cancelDeletePost = () => {
+  showDeletePostConfirm.value = false
+  postToDelete.value = null
+  deleteError.value = ''
+}
+
+const handleDeletePost = async () => {
+  if (!postToDelete.value) return
+  
+  try {
+    deletingPost.value = true
+    deleteError.value = ''
+
+    if (!auth.userId) {
+      throw new Error('You must be logged in to delete posts')
+    }
+
+    console.log('Deleting post:', postToDelete.value._id)
+
+    await communityBoard.deletePostAction(postToDelete.value._id, auth.userId)
+
+    console.log('Post deleted successfully')
+    cancelDeletePost()
+  } catch (error: any) {
+    console.error('Failed to delete post:', error)
+    deleteError.value = error.response?.data?.error || error.message || 'Failed to delete post'
+  } finally {
+    deletingPost.value = false
+  }
+}
+
+const confirmDeleteReply = (reply: any) => {
+  replyToDelete.value = reply
+  showDeleteReplyConfirm.value = true
+  deleteError.value = ''
+}
+
+const cancelDeleteReply = () => {
+  showDeleteReplyConfirm.value = false
+  replyToDelete.value = null
+  deleteError.value = ''
+}
+
+const handleDeleteReply = async () => {
+  if (!replyToDelete.value) return
+  
+  try {
+    deletingReply.value = true
+    deleteError.value = ''
+
+    if (!auth.userId) {
+      throw new Error('You must be logged in to delete replies')
+    }
+
+    console.log('Deleting reply:', replyToDelete.value._id)
+
+    await communityBoard.deleteReplyAction(replyToDelete.value._id, auth.userId)
+
+    console.log('Reply deleted successfully')
+    cancelDeleteReply()
+  } catch (error: any) {
+    console.error('Failed to delete reply:', error)
+    deleteError.value = error.response?.data?.error || error.message || 'Failed to delete reply'
+  } finally {
+    deletingReply.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     isLoading.value = true
@@ -748,6 +1242,9 @@ onMounted(async () => {
     if (community.communities.length === 0) {
       await community.fetchCommunities()
     }
+    
+    // Fetch memberships
+    await community.fetchMemberships()
     
     // Check if community exists
     if (!currentCommunity.value) {
@@ -831,7 +1328,8 @@ onMounted(async () => {
   margin-bottom: 2rem;
 }
 
-.back-btn {
+.back-btn,
+.back-link {
   display: inline-block;
   padding: 0.75rem 1.5rem;
   background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
@@ -880,19 +1378,47 @@ onMounted(async () => {
   border-radius: 16px 16px 0 0;
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
   color: #78716c;
   text-decoration: none;
   font-weight: 500;
-  margin-bottom: 1.5rem;
   transition: all 0.2s ease;
 }
 
 .back-link:hover {
   color: #7c2d12;
   transform: translateX(-4px);
+}
+
+.leave-community-btn {
+  padding: 0.625rem 1.25rem;
+  background: white;
+  color: #7c2d12;
+  border: 2px solid #7c2d12;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.leave-community-btn:hover {
+  background: #7c2d12;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 45, 18, 0.3);
 }
 
 .header-content {
@@ -1109,6 +1635,34 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.post-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.edit-post-btn,
+.delete-post-btn {
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.125rem;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.edit-post-btn:hover {
+  background: #fef3c7;
+  transform: scale(1.1);
+}
+
+.delete-post-btn:hover {
+  background: #fef2f2;
+  transform: scale(1.1);
 }
 
 .author-avatar {
@@ -1558,6 +2112,34 @@ onMounted(async () => {
   gap: 0.625rem;
 }
 
+.reply-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.edit-reply-btn,
+.delete-reply-btn {
+  padding: 0.375rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.edit-reply-btn:hover {
+  background: #fef3c7;
+  transform: scale(1.1);
+}
+
+.delete-reply-btn:hover {
+  background: #fef2f2;
+  transform: scale(1.1);
+}
+
 .reply-avatar {
   width: 32px;
   height: 32px;
@@ -1916,6 +2498,368 @@ onMounted(async () => {
 }
 
 .submit-btn .loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Members Section */
+.members-section {
+  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
+  border: 2px solid #e7e5e4;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.members-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+}
+
+.members-loading p {
+  color: #78716c;
+  font-size: 1rem;
+}
+
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.member-card {
+  background: white;
+  border: 2px solid #e7e5e4;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.member-card:hover {
+  border-color: #7c2d12;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(124, 45, 18, 0.1);
+}
+
+.member-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #fef3c7;
+}
+
+.member-avatar-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-initials-large {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #92400e;
+  font-family: 'Sora', sans-serif;
+}
+
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0 0 0.5rem 0;
+}
+
+.member-bio {
+  font-size: 0.875rem;
+  color: #57534e;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.member-bio.no-bio {
+  font-style: italic;
+  color: #a8a29e;
+}
+
+.member-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-badge.admin {
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  color: #92400e;
+  border: 1px solid #fef3c7;
+}
+
+.role-badge.member {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border: 1px solid #93c5fd;
+}
+
+.join-date {
+  font-size: 0.75rem;
+  color: #78716c;
+}
+
+.empty-members {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-members .empty-icon {
+  font-size: 5rem;
+  margin-bottom: 1.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.empty-members h3 {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #7c2d12;
+  margin: 0 0 0.75rem 0;
+}
+
+.empty-members p {
+  font-size: 1rem;
+  color: #78716c;
+  margin: 0;
+}
+
+/* Add Member Form */
+.small-modal {
+  max-width: 500px;
+}
+
+.add-member-form {
+  padding: 2rem;
+}
+
+/* Leave Community Modal */
+.leave-header {
+  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  color: white;
+  border-radius: 14px 14px 0 0;
+}
+
+.leave-header h2 {
+  color: white;
+}
+
+.leave-modal-body {
+  padding: 2rem;
+}
+
+.leave-warning {
+  font-size: 1.125rem;
+  color: #1c1917;
+  margin: 0 0 1rem 0;
+  line-height: 1.6;
+}
+
+.leave-warning strong {
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.leave-note {
+  font-size: 0.9375rem;
+  color: #78716c;
+  margin: 0 0 1.5rem 0;
+  padding: 1rem;
+  background: #fafaf9;
+  border-left: 3px solid #e7e5e4;
+  border-radius: 8px;
+  line-height: 1.6;
+}
+
+.leave-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.leave-confirm-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(124, 45, 18, 0.3);
+  font-size: 1rem;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.leave-confirm-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 45, 18, 0.4);
+}
+
+.leave-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.leave-confirm-btn .loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Delete Post/Reply Modal */
+.delete-header {
+  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  color: white;
+  border-radius: 14px 14px 0 0;
+}
+
+.delete-header h2 {
+  color: white;
+}
+
+.delete-modal-body {
+  padding: 2rem;
+}
+
+.delete-warning {
+  font-size: 1.125rem;
+  color: #1c1917;
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.delete-item-preview {
+  background: #fafaf9;
+  border: 2px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.delete-item-preview strong {
+  display: block;
+  font-family: 'Sora', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 0.5rem;
+}
+
+.delete-item-preview p {
+  font-size: 0.9375rem;
+  color: #57534e;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.delete-note {
+  font-size: 0.875rem;
+  color: #7c2d12;
+  margin: 0 0 1.5rem 0;
+  padding: 1rem;
+  background: #fef2f2;
+  border-left: 3px solid #7c2d12;
+  border-radius: 8px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.delete-confirm-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(124, 45, 18, 0.3);
+  font-size: 1rem;
+  min-width: 140px;
+  justify-content: center;
+}
+
+.delete-confirm-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 45, 18, 0.4);
+}
+
+.delete-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.delete-confirm-btn .loading-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid transparent;

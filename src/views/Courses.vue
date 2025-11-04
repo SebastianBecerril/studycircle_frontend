@@ -41,12 +41,31 @@
               Section: {{ getSectionInfo(enrollment.section) }}
             </p>
           </div>
+          <button 
+            @click="confirmDelete(enrollment)" 
+            class="delete-btn"
+            title="Remove enrollment"
+            :disabled="userEnrollments.isLoading"
+          >
+            🗑️
+          </button>
         </div>
 
         <div class="enrollment-footer">
-          <div class="visibility-badge" :class="{ visible: enrollment.visibility }">
-            <span class="badge-icon">{{ enrollment.visibility ? '👁️' : '🔒' }}</span>
-            <span>{{ enrollment.visibility ? 'Visible to Community' : 'Private' }}</span>
+          <div class="visibility-toggle-container">
+            <label class="visibility-toggle">
+              <input 
+                type="checkbox" 
+                :checked="enrollment.visibility"
+                @change="toggleVisibility(enrollment._id, !enrollment.visibility)"
+                :disabled="userEnrollments.isLoading"
+                class="checkbox-input"
+              />
+              <span class="toggle-label">
+                <span class="badge-icon">{{ enrollment.visibility ? '👁️' : '🔒' }}</span>
+                {{ enrollment.visibility ? 'Visible to Community' : 'Private' }}
+              </span>
+            </label>
           </div>
         </div>
       </div>
@@ -58,6 +77,48 @@
       <h2>No Classes Yet</h2>
       <p>Add your courses to connect with classmates and form study groups</p>
       <button @click="showAddForm = true" class="add-first-btn">Add Your First Course</button>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteConfirm" class="modal-overlay" @click="cancelDelete">
+      <div class="modal-content delete-modal" @click.stop>
+        <div class="modal-header delete-header">
+          <h2>⚠️ Remove Enrollment?</h2>
+          <button @click="cancelDelete" class="close-btn">×</button>
+        </div>
+        
+        <div class="delete-modal-body">
+          <p class="delete-warning">Are you sure you want to remove this course enrollment?</p>
+          <div class="delete-course-info">
+            <div class="delete-course-name">{{ getCourseInfo(enrollmentToDelete?.course || '') }}</div>
+            <div class="delete-section-name">{{ getSectionInfo(enrollmentToDelete?.section || '') }}</div>
+          </div>
+          <p class="delete-note">This action cannot be undone.</p>
+          
+          <div v-if="deleteError" class="error-message">
+            {{ deleteError }}
+            <button type="button" @click="deleteError = ''" class="error-close">×</button>
+          </div>
+          
+          <div class="delete-actions">
+            <button 
+              @click="cancelDelete" 
+              class="cancel-btn"
+              :disabled="userEnrollments.isLoading"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="handleDelete" 
+              class="delete-confirm-btn"
+              :disabled="userEnrollments.isLoading"
+            >
+              <span v-if="userEnrollments.isLoading" class="loading-spinner"></span>
+              <span v-else>Remove Enrollment</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Add Course Modal -->
@@ -284,6 +345,9 @@ const isLoading = ref(true)
 const error = ref('')
 const showAddForm = ref(false)
 const formError = ref('')
+const showDeleteConfirm = ref(false)
+const enrollmentToDelete = ref<any>(null)
+const deleteError = ref('')
 
 const dayOptions = [
   { value: 'M', label: 'Mon' },
@@ -472,6 +536,42 @@ const closeAddForm = () => {
   userEnrollments.clearError()
 }
 
+const confirmDelete = (enrollment: any) => {
+  enrollmentToDelete.value = enrollment
+  showDeleteConfirm.value = true
+  deleteError.value = ''
+}
+
+const cancelDelete = () => {
+  showDeleteConfirm.value = false
+  enrollmentToDelete.value = null
+  deleteError.value = ''
+}
+
+const handleDelete = async () => {
+  if (!enrollmentToDelete.value) return
+  
+  try {
+    deleteError.value = ''
+    await userEnrollments.deleteEnrollment(enrollmentToDelete.value._id)
+    console.log('Enrollment deleted successfully')
+    cancelDelete()
+  } catch (error: any) {
+    console.error('Failed to delete enrollment:', error)
+    deleteError.value = error.message || 'Failed to remove enrollment'
+  }
+}
+
+const toggleVisibility = async (enrollmentId: string, newVisibility: boolean) => {
+  try {
+    await userEnrollments.toggleEnrollmentVisibility(enrollmentId, newVisibility)
+    console.log('Visibility toggled successfully')
+  } catch (error: any) {
+    console.error('Failed to toggle visibility:', error)
+    // Optionally show an error notification
+  }
+}
+
 onMounted(() => {
   // Fetch terms for later use
   courseCatalog.fetchAllTerms()
@@ -643,6 +743,7 @@ onMounted(() => {
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1rem;
+  position: relative;
 }
 
 .course-badge {
@@ -678,34 +779,61 @@ onMounted(() => {
   line-height: 1.5;
 }
 
+.delete-btn {
+  background: white;
+  border: 2px solid #e7e5e4;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fecaca;
+  transform: scale(1.05);
+}
+
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Enrollment Footer */
 .enrollment-footer {
   padding-top: 1rem;
   border-top: 1px solid #e7e5e4;
 }
 
-.visibility-badge {
+.visibility-toggle-container {
+  display: flex;
+  align-items: center;
+}
+
+.visibility-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.visibility-toggle:hover {
+  background: #fafaf9;
+}
+
+.toggle-label {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 2px solid;
-  transition: all 0.2s ease;
-}
-
-.visibility-badge.visible {
-  background: #dbeafe;
-  color: #1e3a8a;
-  border-color: #93c5fd;
-}
-
-.visibility-badge:not(.visible) {
-  background: #fafaf9;
-  color: #78716c;
-  border-color: #e7e5e4;
+  color: #1c1917;
 }
 
 .badge-icon {
@@ -1054,6 +1182,104 @@ select.form-input:focus {
 }
 
 .submit-btn .loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Delete Confirmation Modal */
+.delete-modal {
+  max-width: 500px;
+}
+
+.delete-header {
+  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  color: white;
+  border-radius: 14px 14px 0 0;
+}
+
+.delete-header h2 {
+  color: white;
+}
+
+.delete-modal-body {
+  padding: 2rem;
+}
+
+.delete-warning {
+  font-size: 1.125rem;
+  color: #1c1917;
+  margin: 0 0 1.5rem 0;
+  font-weight: 600;
+}
+
+.delete-course-info {
+  background: #fafaf9;
+  border: 2px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.delete-course-name {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 0.5rem;
+}
+
+.delete-section-name {
+  font-size: 0.9375rem;
+  color: #78716c;
+}
+
+.delete-note {
+  font-size: 0.875rem;
+  color: #78716c;
+  font-style: italic;
+  margin: 0 0 1.5rem 0;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.delete-confirm-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(124, 45, 18, 0.3);
+  font-size: 1rem;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.delete-confirm-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 45, 18, 0.4);
+}
+
+.delete-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.delete-confirm-btn .loading-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid transparent;

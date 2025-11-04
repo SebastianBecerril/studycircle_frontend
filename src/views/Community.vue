@@ -88,7 +88,15 @@
           >
             View Board
           </router-link>
-          <div v-else class="private-badge">
+          <button
+            v-if="communityItem?._id && community.isUserAdmin(communityItem._id)"
+            @click="startEditCommunity(communityItem)"
+            class="edit-btn"
+            title="Edit community"
+          >
+            ✏️ Edit
+          </button>
+          <div v-else-if="!isUserMember(communityItem._id)" class="private-badge">
             <span class="lock-icon">🔒</span>
             <span>Private Community</span>
           </div>
@@ -165,6 +173,65 @@
         </form>
       </div>
     </div>
+
+    <!-- Edit Community Modal -->
+    <div v-if="showEditForm" class="modal-overlay" @click="closeEditForm">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Edit Community</h2>
+          <button @click="closeEditForm" class="close-btn">×</button>
+        </div>
+        
+        <form @submit.prevent="handleEditCommunity" class="create-form">
+          <div class="form-group">
+            <label for="editCommunityName">Community Name</label>
+            <input
+              id="editCommunityName"
+              v-model="editForm.name"
+              type="text"
+              required
+              placeholder="Enter community name..."
+              class="form-input"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="editCommunityDescription">Description</label>
+            <textarea
+              id="editCommunityDescription"
+              v-model="editForm.description"
+              required
+              placeholder="Describe your community..."
+              rows="4"
+              class="form-textarea"
+            ></textarea>
+          </div>
+
+          <div v-if="editError" class="error-message">
+            {{ editError }}
+            <button type="button" @click="editError = ''" class="close-btn">×</button>
+          </div>
+          
+          <div class="form-actions">
+            <button 
+              type="button" 
+              @click="closeEditForm" 
+              class="cancel-btn"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              :disabled="community.isLoading || !editForm.name.trim() || !editForm.description.trim()"
+              class="submit-btn"
+            >
+              <span v-if="community.isLoading" class="loading-spinner small"></span>
+              {{ community.isLoading ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -178,10 +245,18 @@ const auth = useAuthStore()
 
 // Reactive data
 const showCreateForm = ref(false)
+const showEditForm = ref(false)
 const searchQuery = ref('')
 const filter = ref<'all' | 'joined'>('all')
+const editError = ref('')
+const communityToEdit = ref<any>(null)
 
 const createForm = ref({
+  name: '',
+  description: ''
+})
+
+const editForm = ref({
   name: '',
   description: ''
 })
@@ -250,6 +325,56 @@ const handleCreateCommunity = async () => {
 const closeCreateForm = () => {
   showCreateForm.value = false
   createForm.value = { name: '', description: '' }
+  community.clearError()
+}
+
+const startEditCommunity = (communityItem: any) => {
+  communityToEdit.value = communityItem
+  editForm.value = {
+    name: communityItem.name,
+    description: communityItem.description
+  }
+  showEditForm.value = true
+  editError.value = ''
+}
+
+const handleEditCommunity = async () => {
+  try {
+    if (!auth.userId) {
+      throw new Error('User not authenticated')
+    }
+
+    if (!communityToEdit.value) {
+      throw new Error('No community selected for editing')
+    }
+
+    console.log('Updating community with data:', {
+      communityId: communityToEdit.value._id,
+      name: editForm.value.name.trim(),
+      description: editForm.value.description.trim(),
+      userId: auth.userId
+    })
+
+    await community.updateCommunityDetails(
+      communityToEdit.value._id,
+      editForm.value.name.trim(),
+      editForm.value.description.trim(),
+      auth.userId
+    )
+
+    console.log('Community updated successfully')
+    closeEditForm()
+  } catch (error: any) {
+    console.error('Failed to update community:', error)
+    editError.value = error.message || 'Failed to update community'
+  }
+}
+
+const closeEditForm = () => {
+  showEditForm.value = false
+  editForm.value = { name: '', description: '' }
+  communityToEdit.value = null
+  editError.value = ''
   community.clearError()
 }
 
@@ -536,6 +661,7 @@ onMounted(() => {
   margin-bottom: 1.5rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -563,6 +689,27 @@ onMounted(() => {
 .view-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(124, 45, 18, 0.4);
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+}
+
+.edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
 }
 
 .private-badge {
