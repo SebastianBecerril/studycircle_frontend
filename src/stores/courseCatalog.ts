@@ -214,6 +214,31 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     }
   }
 
+  const fetchCourseById = async (courseId: string) => {
+    setError(null)
+    try {
+      const response = await studyCircleApi.getCourseById(courseId)
+      console.log('Fetch course by ID response:', response)
+      
+      // The API might return { course: courseObject } or just the course object
+      const course = response.course || response
+      
+      if (course && course._id) {
+        // Add course if not already in store
+        if (!courses.value.find(c => c._id === course._id)) {
+          addCourse(course)
+        }
+        return course
+      } else {
+        throw new Error('Invalid course data returned from API')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch course')
+      console.error('Error fetching course:', err)
+      throw err
+    }
+  }
+
   const createOrGetTermAction = async (name: string) => {
     setError(null)
     try {
@@ -364,6 +389,7 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     fetchAllTerms,
     fetchCoursesByTerm,
     fetchSectionsByCourse,
+    fetchCourseById,
     createOrGetTermAction,
     createOrGetCourseAction,
     createOrGetSectionAction

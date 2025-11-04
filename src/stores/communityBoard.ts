@@ -240,6 +240,78 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     }
   }
 
+  const createReply = async (postingId: string, authorId: string, body: string) => {
+    setError(null)
+    try {
+      const response = await studyCircleApi.replyToPost(postingId, authorId, body)
+      console.log('Create reply response:', response)
+      
+      // The API returns { reply: "replyId" }
+      const replyId = response.reply
+      
+      if (replyId) {
+        // Create the reply object
+        const newReply: Reply = {
+          _id: replyId,
+          author: authorId,
+          posting: postingId,
+          body
+        }
+        
+        addReply(newReply)
+        return newReply
+      } else {
+        throw new Error('No reply ID returned from API')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to create reply')
+      console.error('Error creating reply:', err)
+      throw err
+    }
+  }
+
+  const updatePostAction = async (
+    postingId: string,
+    newTitle: string,
+    newBody: string,
+    newTags: string[],
+    newCourse: string,
+    requesterId: string
+  ) => {
+    setError(null)
+    try {
+      await studyCircleApi.updatePost(postingId, newTitle, newBody, newTags, newCourse, requesterId)
+      console.log('Post updated successfully')
+      
+      // Update in store
+      updatePost(postingId, {
+        title: newTitle,
+        body: newBody,
+        tags: newTags,
+        course: newCourse
+      })
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to update post')
+      console.error('Error updating post:', err)
+      throw err
+    }
+  }
+
+  const updateReplyAction = async (replyId: string, newBody: string, requesterId: string) => {
+    setError(null)
+    try {
+      await studyCircleApi.updateReply(replyId, newBody, requesterId)
+      console.log('Reply updated successfully')
+      
+      // Update in store
+      updateReply(replyId, { body: newBody })
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to update reply')
+      console.error('Error updating reply:', err)
+      throw err
+    }
+  }
+
   return {
     // State
     posts,
@@ -273,6 +345,9 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     // API Actions
     fetchPostsByCommunity,
     fetchRepliesForPost,
-    createPost
+    createPost,
+    createReply,
+    updatePostAction,
+    updateReplyAction
   }
 })

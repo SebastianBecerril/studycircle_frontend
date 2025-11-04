@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { studyCircleApi } from '@/services/studyCircleApi'
 
 export interface UserProfile {
   _id: string
@@ -65,6 +66,131 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     currentProfile.value = null
   }
 
+  const clearError = () => {
+    error.value = null
+  }
+
+  // API Actions
+  const fetchProfileByUser = async (userId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await studyCircleApi.getProfileByUser(userId)
+      console.log('Fetch profile response:', response)
+      
+      // API might return { profile: profileObject } or just the profile
+      const profile = response.profile || response
+      
+      if (profile && profile._id) {
+        setCurrentProfile(profile)
+        
+        // Also add to profiles array if not already there
+        if (!profiles.value.find(p => p._id === profile._id)) {
+          addProfile(profile)
+        }
+        
+        return profile
+      } else {
+        // No profile found - this is not an error, user just hasn't created one yet
+        setCurrentProfile(null)
+        return null
+      }
+    } catch (err: any) {
+      // 404 or no profile is not an error state - user just needs to create one
+      if (err.response?.status === 404 || err.response?.data?.error?.includes('not found')) {
+        console.log('No profile found for user:', userId)
+        setCurrentProfile(null)
+        return null
+      }
+      
+      setError(err.response?.data?.error || err.message || 'Failed to fetch profile')
+      console.error('Error fetching profile:', err)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createProfileAction = async (userId: string, displayName: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await studyCircleApi.createProfile(userId, displayName)
+      console.log('Create profile response:', response)
+      
+      const profileId = response.profile
+      
+      if (!profileId) {
+        throw new Error('No profile ID returned from API')
+      }
+      
+      // Create the profile object
+      const newProfile: UserProfile = {
+        _id: profileId,
+        user: userId,
+        displayName,
+        bio: '',
+        thumbnailImageURL: ''
+      }
+      
+      setCurrentProfile(newProfile)
+      addProfile(newProfile)
+      
+      return newProfile
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to create profile')
+      console.error('Error creating profile:', err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateDisplayNameAction = async (profileId: string, newDisplayName: string) => {
+    setError(null)
+    try {
+      await studyCircleApi.updateDisplayName(profileId, newDisplayName)
+      console.log('Display name updated')
+      
+      // Update in store
+      updateProfile(profileId, { displayName: newDisplayName })
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to update display name')
+      console.error('Error updating display name:', err)
+      throw err
+    }
+  }
+
+  const updateBioAction = async (profileId: string, newBio: string) => {
+    setError(null)
+    try {
+      await studyCircleApi.updateBio(profileId, newBio)
+      console.log('Bio updated')
+      
+      // Update in store
+      updateProfile(profileId, { bio: newBio })
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to update bio')
+      console.error('Error updating bio:', err)
+      throw err
+    }
+  }
+
+  const updateThumbnailAction = async (profileId: string, newThumbnailImageURL: string) => {
+    setError(null)
+    try {
+      await studyCircleApi.updateThumbnailImage(profileId, newThumbnailImageURL)
+      console.log('Thumbnail updated')
+      
+      // Update in store
+      updateProfile(profileId, { thumbnailImageURL: newThumbnailImageURL })
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to update thumbnail')
+      console.error('Error updating thumbnail:', err)
+      throw err
+    }
+  }
+
   return {
     // State
     currentProfile,
@@ -86,6 +212,14 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     removeProfile,
     setLoading,
     setError,
-    clearProfile
+    clearProfile,
+    clearError,
+    
+    // API Actions
+    fetchProfileByUser,
+    createProfileAction,
+    updateDisplayNameAction,
+    updateBioAction,
+    updateThumbnailAction
   }
 })

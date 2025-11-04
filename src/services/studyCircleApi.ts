@@ -309,6 +309,11 @@ export const studyCircleApi = {
     return response.data
   },
 
+  // Alias for consistency
+  async getCoursesByTerm(term: string) {
+    return this.getCoursesForTerm(term)
+  },
+
   async getCourseById(course: string) {
     const response = await api.post('/CourseCatalog/_getCourseById', { course })
     return response.data
@@ -317,6 +322,11 @@ export const studyCircleApi = {
   async getSectionsForCourse(course: string) {
     const response = await api.post('/CourseCatalog/_getSectionsForCourse', { course })
     return response.data
+  },
+
+  // Alias for consistency
+  async getSectionsByCourse(course: string) {
+    return this.getSectionsForCourse(course)
   },
 
   async getSectionById(section: string) {

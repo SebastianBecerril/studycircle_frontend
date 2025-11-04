@@ -6,8 +6,42 @@
         <router-link to="/">Home</router-link>
         <router-link to="/community">Communities</router-link>
         <router-link to="/courses">Courses</router-link>
+        
+        <!-- Login button for non-logged-in users -->
         <router-link v-if="!isLoggedIn" to="/login" class="login-link">Sign In</router-link>
-        <button v-else @click="handleLogout" class="logout-button">Sign Out</button>
+        
+        <!-- User menu dropdown for logged-in users -->
+        <div v-else class="user-menu" @click="toggleUserMenu" v-click-outside="closeUserMenu">
+          <div class="user-menu-trigger">
+            <div class="user-avatar">
+              <img 
+                v-if="userProfile.currentProfile?.thumbnailImageURL" 
+                :src="userProfile.currentProfile.thumbnailImageURL" 
+                alt="Profile"
+                @error="avatarError = true"
+              />
+              <span v-else class="avatar-initials">
+                {{ getInitials() }}
+              </span>
+            </div>
+            <span class="user-name">{{ getDisplayName() }}</span>
+            <span class="dropdown-icon">▼</span>
+          </div>
+          
+          <transition name="dropdown">
+            <div v-if="showUserMenu" class="user-menu-dropdown">
+              <router-link to="/profile" class="menu-item" @click="closeUserMenu">
+                <span class="menu-icon">👤</span>
+                <span>View Profile</span>
+              </router-link>
+              <div class="menu-divider"></div>
+              <button @click="handleLogout" class="menu-item logout-item">
+                <span class="menu-icon">🚪</span>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </transition>
+        </div>
       </nav>
     </header>
     
@@ -22,16 +56,46 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useUserProfileStore } from '@/stores/userProfile'
 
 const router = useRouter()
 const auth = useAuthStore()
+const userProfile = useUserProfileStore()
 
 const isLoggedIn = computed(() => auth.isLoggedIn)
+const showUserMenu = ref(false)
+const avatarError = ref(false)
+
+const getInitials = () => {
+  if (userProfile.currentProfile?.displayName) {
+    const name = userProfile.currentProfile.displayName
+    const parts = name.trim().split(' ')
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return name[0].toUpperCase()
+  }
+  return '?'
+}
+
+const getDisplayName = () => {
+  return userProfile.currentProfile?.displayName || 'User'
+}
+
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+}
+
+const closeUserMenu = () => {
+  showUserMenu.value = false
+}
 
 const handleLogout = async () => {
+  closeUserMenu()
+  
   if (auth.currentSession?.sessionId) {
     try {
       // Call the API logout function
@@ -43,13 +107,38 @@ const handleLogout = async () => {
   }
   auth.clearAuth()
   auth.clearStorage()
+  userProfile.clearProfile()
   router.push('/login')
 }
 
-// Load auth state on app start
-onMounted(() => {
+// Load auth state and profile on app start
+onMounted(async () => {
   auth.loadFromStorage()
+  
+  // If user is logged in, fetch their profile
+  if (auth.isLoggedIn && auth.userId) {
+    try {
+      await userProfile.fetchProfileByUser(auth.userId)
+    } catch (error) {
+      console.error('Failed to load user profile:', error)
+    }
+  }
 })
+
+// Click outside directive (inline implementation)
+const vClickOutside = {
+  mounted(el: any, binding: any) {
+    el.clickOutsideEvent = (event: Event) => {
+      if (!(el === event.target || el.contains(event.target))) {
+        binding.value()
+      }
+    }
+    document.addEventListener('click', el.clickOutsideEvent)
+  },
+  unmounted(el: any) {
+    document.removeEventListener('click', el.clickOutsideEvent)
+  }
+}
 </script>
 
 <style scoped>
@@ -131,20 +220,138 @@ nav a.router-link-active {
   box-shadow: 0 4px 8px rgba(30, 58, 138, 0.3);
 }
 
-.logout-button {
-  background: #292524;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+/* User Menu */
+.user-menu {
+  position: relative;
   cursor: pointer;
-  font-size: 0.9rem;
+}
+
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: #fafaf9;
+  border: 2px solid #e7e5e4;
+}
+
+.user-menu-trigger:hover {
+  background: #fef3c7;
+  border-color: #d97706;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e7e5e4;
+  flex-shrink: 0;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-initials {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #92400e;
+  font-family: 'Sora', sans-serif;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #1c1917;
+  font-size: 0.9375rem;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-icon {
+  font-size: 0.625rem;
+  color: #78716c;
+  transition: transform 0.2s ease;
+}
+
+.user-menu-trigger:hover .dropdown-icon {
+  transform: translateY(1px);
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: white;
+  border: 2px solid #e7e5e4;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 200px;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  width: 100%;
+  border: none;
+  background: white;
+  color: #1c1917;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9375rem;
   font-weight: 500;
+  text-align: left;
+  font-family: inherit;
+}
+
+.menu-item:hover {
+  background: #fef3c7;
+}
+
+.menu-icon {
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #e7e5e4;
+  margin: 0;
+}
+
+.logout-item {
+  color: #7c2d12;
+}
+
+.logout-item:hover {
+  background: #fef2f2;
+}
+
+/* Dropdown transition */
+.dropdown-enter-active,
+.dropdown-leave-active {
   transition: all 0.2s ease;
 }
 
-.logout-button:hover {
-  background: #1c1917;
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 main {
@@ -176,6 +383,16 @@ footer {
   nav {
     flex-wrap: wrap;
     justify-content: center;
+  }
+
+  .user-menu-dropdown {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .user-name {
+    max-width: 100px;
   }
   
   main {

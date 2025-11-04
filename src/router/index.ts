@@ -28,6 +28,11 @@ const routes = [
     component: () => import('../views/CommunityBoard.vue')
   },
   {
+    path: '/community/:id/schedule',
+    name: 'CommunitySchedule',
+    component: () => import('../views/CommunitySchedule.vue')
+  },
+  {
     path: '/courses',
     name: 'Courses',
     component: () => import('../views/Courses.vue')

@@ -109,6 +109,27 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     }
   }
 
+  // Fetch and merge enrollments (doesn't replace existing ones)
+  const fetchAndMergeEnrollmentsByOwner = async (userId: string) => {
+    setError(null)
+    try {
+      const response = await studyCircleApi.getEnrollmentsByOwner(userId)
+      console.log('Fetch and merge enrollments response for user', userId, ':', response)
+      
+      // Merge new enrollments, avoiding duplicates
+      const newEnrollments = response || []
+      newEnrollments.forEach((enrollment: Enrollment) => {
+        // Only add if not already present
+        if (!enrollments.value.find(e => e._id === enrollment._id)) {
+          addEnrollment(enrollment)
+        }
+      })
+    } catch (err: any) {
+      console.warn(`Failed to fetch enrollments for user ${userId}:`, err)
+      // Don't throw - we want to continue with other users
+    }
+  }
+
   const createEnrollment = async (
     owner: string,
     course: string,
@@ -174,6 +195,7 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     
     // API Actions
     fetchEnrollmentsByOwner,
+    fetchAndMergeEnrollmentsByOwner,
     createEnrollment
   }
 })

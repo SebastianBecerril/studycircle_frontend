@@ -346,12 +346,21 @@ const fetchData = async () => {
     
     // Fetch courses and their sections
     for (const courseId of courseIds) {
-      const course = courseCatalog.courses.find(c => c._id === courseId)
+      let course = courseCatalog.courses.find(c => c._id === courseId)
+      
       if (!course) {
-        // Course not in store, need to fetch but we need term first
-        // For now, skip - this will be handled in Step 2b when adding enrollments
-        console.warn('Course not found in store:', courseId)
-      } else {
+        // Course not in store, fetch it
+        try {
+          console.log('Fetching course details for:', courseId)
+          await courseCatalog.fetchCourseById(courseId)
+          course = courseCatalog.courses.find(c => c._id === courseId)
+        } catch (err) {
+          console.error('Failed to fetch course:', courseId, err)
+          continue // Skip this course if we can't fetch it
+        }
+      }
+      
+      if (course) {
         // Fetch sections for this course
         await courseCatalog.fetchSectionsByCourse(courseId)
       }

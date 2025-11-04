@@ -41,6 +41,23 @@
         </div>
       </div>
 
+      <!-- Navigation Tabs -->
+      <div class="board-navigation">
+        <div class="nav-tabs">
+          <button class="nav-tab active">
+            <span class="tab-icon">💬</span>
+            Board
+          </button>
+          <router-link 
+            :to="`/community/${communityId}/schedule`" 
+            class="nav-tab nav-tab-link"
+          >
+            <span class="tab-icon">📚</span>
+            Shared Schedule
+          </router-link>
+        </div>
+      </div>
+
       <!-- Posts Section -->
       <div class="posts-section">
         <div class="section-header">
@@ -66,15 +83,79 @@
           >
             <div class="post-header">
               <div class="post-author">
-                <div class="author-avatar">👤</div>
-                <div class="author-info">
-                  <span class="author-name">User {{ post.author.slice(0, 8) }}</span>
+                <div class="author-avatar">
+                  <img 
+                    v-if="profileHelper.getAvatarUrl(post.author)" 
+                    :src="profileHelper.getAvatarUrl(post.author)!" 
+                    alt="Avatar"
+                  />
+                  <span v-else class="avatar-initials">
+                    {{ profileHelper.getInitials(profileHelper.getDisplayName(post.author)) }}
+                  </span>
                 </div>
+                <div class="author-info">
+                  <span class="author-name">{{ profileHelper.getDisplayName(post.author) }}</span>
+                </div>
+              </div>
+              <button 
+                v-if="post.author === auth.userId && !editingPost.has(post._id)"
+                @click="startEditPost(post)"
+                class="edit-post-btn"
+                title="Edit post"
+              >
+                ✏️
+              </button>
+            </div>
+
+            <!-- Edit Post Form -->
+            <div v-if="editingPost.has(post._id)" class="edit-post-form">
+              <div class="form-group">
+                <input
+                  v-model="editPostForms[post._id].title"
+                  type="text"
+                  placeholder="Title"
+                  class="edit-input"
+                />
+              </div>
+              <div class="form-group">
+                <textarea
+                  v-model="editPostForms[post._id].body"
+                  placeholder="Message"
+                  rows="4"
+                  class="edit-textarea"
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <input
+                  v-model="editPostForms[post._id].tags"
+                  type="text"
+                  placeholder="Tags (comma-separated)"
+                  class="edit-input"
+                />
+              </div>
+              
+              <div v-if="editPostErrors[post._id]" class="edit-error">
+                {{ editPostErrors[post._id] }}
+              </div>
+              
+              <div class="edit-actions">
+                <button @click="cancelEditPost(post._id)" class="cancel-edit-btn">Cancel</button>
+                <button 
+                  @click="handleUpdatePost(post._id)" 
+                  class="save-edit-btn"
+                  :disabled="savingPost.has(post._id)"
+                >
+                  <span v-if="savingPost.has(post._id)" class="small-spinner"></span>
+                  <span v-else>Save Changes</span>
+                </button>
               </div>
             </div>
 
-            <h3 class="post-title">{{ post.title }}</h3>
-            <p class="post-body">{{ post.body }}</p>
+            <!-- Post Content (when not editing) -->
+            <template v-if="!editingPost.has(post._id)">
+              <h3 class="post-title">{{ post.title }}</h3>
+              <p class="post-body">{{ post.body }}</p>
+            </template>
 
             <div class="post-footer">
               <div class="post-tags" v-if="post.tags && post.tags.length > 0">
@@ -88,10 +169,141 @@
               </div>
               
               <div class="post-meta">
-                <span class="reply-count">
+                <button 
+                  @click="toggleReplies(post._id)"
+                  class="reply-count-btn"
+                  :class="{ 'active': expandedPosts.has(post._id) }"
+                >
                   <span class="meta-icon">💬</span>
-                  {{ post.replies?.length || 0 }} replies
-                </span>
+                  {{ post.replies?.length || 0 }} {{ post.replies?.length === 1 ? 'reply' : 'replies' }}
+                  <span class="expand-icon">{{ expandedPosts.has(post._id) ? '▲' : '▼' }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Replies Section -->
+            <div v-if="expandedPosts.has(post._id)" class="replies-section">
+              <div class="replies-header">
+                <h4>Replies</h4>
+                <button 
+                  @click="showReplyForm(post._id)" 
+                  class="add-reply-btn"
+                  :disabled="replyingTo.has(post._id)"
+                >
+                  <span class="btn-icon">💬</span>
+                  Reply
+                </button>
+              </div>
+
+              <!-- Reply Form -->
+              <div v-if="replyingTo.has(post._id)" class="reply-form">
+                <textarea
+                  v-model="replyForms[post._id]"
+                  placeholder="Write your reply..."
+                  rows="3"
+                  class="reply-textarea"
+                  @keydown.ctrl.enter="handleCreateReply(post._id)"
+                  @keydown.meta.enter="handleCreateReply(post._id)"
+                ></textarea>
+                
+                <div v-if="replyErrors[post._id]" class="reply-error">
+                  {{ replyErrors[post._id] }}
+                </div>
+                
+                <div class="reply-form-actions">
+                  <button 
+                    @click="cancelReply(post._id)" 
+                    class="cancel-reply-btn"
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    @click="handleCreateReply(post._id)" 
+                    class="submit-reply-btn"
+                    :disabled="!replyForms[post._id]?.trim() || submittingReply.has(post._id)"
+                    type="button"
+                  >
+                    <span v-if="submittingReply.has(post._id)" class="small-spinner"></span>
+                    <span v-else>Post Reply</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Loading Replies -->
+              <div v-if="loadingReplies.has(post._id)" class="replies-loading">
+                <div class="small-spinner"></div>
+                <span>Loading replies...</span>
+              </div>
+
+              <!-- Replies List -->
+              <div v-else-if="getPostReplies(post._id).length > 0" class="replies-list">
+                <div 
+                  v-for="reply in getPostReplies(post._id)" 
+                  :key="reply._id"
+                  class="reply-card"
+                >
+                  <div class="reply-header-section">
+                    <div class="reply-author">
+                      <div class="reply-avatar">
+                        <img 
+                          v-if="profileHelper.getAvatarUrl(reply.author)" 
+                          :src="profileHelper.getAvatarUrl(reply.author)!" 
+                          alt="Avatar"
+                        />
+                        <span v-else class="avatar-initials">
+                          {{ profileHelper.getInitials(profileHelper.getDisplayName(reply.author)) }}
+                        </span>
+                      </div>
+                      <div class="reply-author-info">
+                        <span class="reply-author-name">{{ profileHelper.getDisplayName(reply.author) }}</span>
+                      </div>
+                    </div>
+                    <button 
+                      v-if="reply.author === auth.userId && !editingReply.has(reply._id)"
+                      @click="startEditReply(reply)"
+                      class="edit-reply-btn"
+                      title="Edit reply"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                  
+                  <!-- Edit Reply Form -->
+                  <div v-if="editingReply.has(reply._id)" class="edit-reply-form">
+                    <textarea
+                      v-model="editReplyForms[reply._id]"
+                      placeholder="Edit your reply..."
+                      rows="3"
+                      class="edit-textarea"
+                    ></textarea>
+                    
+                    <div v-if="editReplyErrors[reply._id]" class="edit-error">
+                      {{ editReplyErrors[reply._id] }}
+                    </div>
+                    
+                    <div class="edit-actions">
+                      <button @click="cancelEditReply(reply._id)" class="cancel-edit-btn">Cancel</button>
+                      <button 
+                        @click="handleUpdateReply(reply._id)" 
+                        class="save-edit-btn"
+                        :disabled="savingReply.has(reply._id)"
+                      >
+                        <span v-if="savingReply.has(reply._id)" class="small-spinner"></span>
+                        <span v-else>Save Changes</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Reply Content (when not editing) -->
+                  <p v-if="!editingReply.has(reply._id)" class="reply-body">{{ reply.body }}</p>
+                </div>
+              </div>
+
+              <!-- No Replies -->
+              <div v-else-if="!replyingTo.has(post._id)" class="no-replies">
+                <span class="no-replies-icon">💭</span>
+                <p>No replies yet. Be the first to respond!</p>
               </div>
             </div>
           </div>
@@ -185,18 +397,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useStores } from '@/composables/useStores'
+import { useProfileHelper } from '@/composables/useProfileHelper'
 
 const route = useRoute()
 const { community, communityBoard, auth } = useStores()
+const profileHelper = useProfileHelper()
 
 const isLoading = ref(true)
 const error = ref('')
 const showCreatePostForm = ref(false)
 const postError = ref('')
 const tagsInput = ref('')
+const expandedPosts = ref(new Set<string>())
+const loadingReplies = ref(new Set<string>())
+const replyingTo = ref(new Set<string>())
+const submittingReply = ref(new Set<string>())
+const replyForms = ref<Record<string, string>>({})
+const replyErrors = ref<Record<string, string>>({})
+const editingPost = ref(new Set<string>())
+const savingPost = ref(new Set<string>())
+const editPostForms = ref<Record<string, any>>({})
+const editPostErrors = ref<Record<string, string>>({})
+const editingReply = ref(new Set<string>())
+const savingReply = ref(new Set<string>())
+const editReplyForms = ref<Record<string, string>>({})
+const editReplyErrors = ref<Record<string, string>>({})
 
 const createPostForm = ref({
   title: '',
@@ -213,6 +441,16 @@ const communityPosts = computed(() => {
   return communityBoard.postsByCommunity(communityId.value)
 })
 
+// Watch posts and fetch profiles for authors
+watch(communityPosts, async (posts) => {
+  if (posts && posts.length > 0) {
+    const authorIds = posts.map(post => post.author).filter(Boolean)
+    if (authorIds.length > 0) {
+      await profileHelper.fetchProfilesForUsers(authorIds)
+    }
+  }
+}, { immediate: true })
+
 const formatDate = (dateString: string) => {
   if (!dateString) return 'Unknown date'
   const date = new Date(dateString)
@@ -221,6 +459,213 @@ const formatDate = (dateString: string) => {
     month: 'long', 
     day: 'numeric' 
   })
+}
+
+const getPostReplies = (postId: string) => {
+  return communityBoard.repliesForPost(postId)
+}
+
+const toggleReplies = async (postId: string) => {
+  if (expandedPosts.value.has(postId)) {
+    // Collapse
+    expandedPosts.value.delete(postId)
+  } else {
+    // Expand and fetch replies
+    expandedPosts.value.add(postId)
+    
+    // Fetch replies if not already loaded
+    const replies = communityBoard.repliesForPost(postId)
+    if (replies.length === 0) {
+      loadingReplies.value.add(postId)
+      try {
+        await communityBoard.fetchRepliesForPost(postId)
+        
+        // Fetch profiles for reply authors
+        const replyAuthors = communityBoard.repliesForPost(postId).map(r => r.author).filter(Boolean)
+        if (replyAuthors.length > 0) {
+          await profileHelper.fetchProfilesForUsers(replyAuthors)
+        }
+      } catch (error) {
+        console.error('Failed to fetch replies:', error)
+      } finally {
+        loadingReplies.value.delete(postId)
+      }
+    }
+  }
+}
+
+const showReplyForm = (postId: string) => {
+  replyingTo.value.add(postId)
+  if (!replyForms.value[postId]) {
+    replyForms.value[postId] = ''
+  }
+  replyErrors.value[postId] = ''
+}
+
+const cancelReply = (postId: string) => {
+  replyingTo.value.delete(postId)
+  replyForms.value[postId] = ''
+  replyErrors.value[postId] = ''
+}
+
+const handleCreateReply = async (postId: string) => {
+  try {
+    replyErrors.value[postId] = ''
+    
+    if (!auth.userId) {
+      replyErrors.value[postId] = 'You must be logged in to reply'
+      return
+    }
+
+    const replyBody = replyForms.value[postId]?.trim()
+    
+    if (!replyBody) {
+      replyErrors.value[postId] = 'Please enter a reply'
+      return
+    }
+
+    if (replyBody.length < 3) {
+      replyErrors.value[postId] = 'Reply must be at least 3 characters'
+      return
+    }
+
+    console.log('Creating reply:', { postId, body: replyBody })
+
+    submittingReply.value.add(postId)
+
+    await communityBoard.createReply(postId, auth.userId, replyBody)
+    
+    // Fetch profile for current user if not already loaded
+    if (!profileHelper.hasProfile(auth.userId)) {
+      await profileHelper.fetchProfilesForUsers([auth.userId])
+    }
+
+    console.log('Reply created successfully')
+    
+    // Clear form and close
+    replyForms.value[postId] = ''
+    replyingTo.value.delete(postId)
+    replyErrors.value[postId] = ''
+    
+  } catch (error: any) {
+    console.error('Failed to create reply:', error)
+    replyErrors.value[postId] = error.message || 'Failed to create reply'
+  } finally {
+    submittingReply.value.delete(postId)
+  }
+}
+
+const startEditPost = (post: any) => {
+  editingPost.value.add(post._id)
+  editPostForms.value[post._id] = {
+    title: post.title,
+    body: post.body,
+    tags: post.tags.join(', ')
+  }
+  editPostErrors.value[post._id] = ''
+}
+
+const cancelEditPost = (postId: string) => {
+  editingPost.value.delete(postId)
+  delete editPostForms.value[postId]
+  editPostErrors.value[postId] = ''
+}
+
+const handleUpdatePost = async (postId: string) => {
+  try {
+    editPostErrors.value[postId] = ''
+    
+    if (!auth.userId) {
+      editPostErrors.value[postId] = 'You must be logged in to edit'
+      return
+    }
+
+    const title = editPostForms.value[postId].title?.trim()
+    const body = editPostForms.value[postId].body?.trim()
+    
+    if (!title || title.length < 3) {
+      editPostErrors.value[postId] = 'Title must be at least 3 characters'
+      return
+    }
+
+    if (!body || body.length < 10) {
+      editPostErrors.value[postId] = 'Body must be at least 10 characters'
+      return
+    }
+
+    const tags = editPostForms.value[postId].tags
+      .split(',')
+      .map((tag: string) => tag.trim())
+      .filter((tag: string) => tag.length > 0)
+
+    console.log('Updating post:', { postId, title, body, tags })
+
+    savingPost.value.add(postId)
+
+    await communityBoard.updatePostAction(postId, title, body, tags, '', auth.userId)
+
+    console.log('Post updated successfully')
+    
+    // Close edit form
+    editingPost.value.delete(postId)
+    delete editPostForms.value[postId]
+    editPostErrors.value[postId] = ''
+    
+  } catch (error: any) {
+    console.error('Failed to update post:', error)
+    editPostErrors.value[postId] = error.message || 'Failed to update post'
+  } finally {
+    savingPost.value.delete(postId)
+  }
+}
+
+const startEditReply = (reply: any) => {
+  editingReply.value.add(reply._id)
+  editReplyForms.value[reply._id] = reply.body
+  editReplyErrors.value[reply._id] = ''
+}
+
+const cancelEditReply = (replyId: string) => {
+  editingReply.value.delete(replyId)
+  delete editReplyForms.value[replyId]
+  editReplyErrors.value[replyId] = ''
+}
+
+const handleUpdateReply = async (replyId: string) => {
+  try {
+    editReplyErrors.value[replyId] = ''
+    
+    if (!auth.userId) {
+      editReplyErrors.value[replyId] = 'You must be logged in to edit'
+      return
+    }
+
+    const body = editReplyForms.value[replyId]?.trim()
+    
+    if (!body || body.length < 3) {
+      editReplyErrors.value[replyId] = 'Reply must be at least 3 characters'
+      return
+    }
+
+    console.log('Updating reply:', { replyId, body })
+
+    savingReply.value.add(replyId)
+
+    await communityBoard.updateReplyAction(replyId, body, auth.userId)
+
+    console.log('Reply updated successfully')
+    
+    // Close edit form
+    editingReply.value.delete(replyId)
+    delete editReplyForms.value[replyId]
+    editReplyErrors.value[replyId] = ''
+    
+  } catch (error: any) {
+    console.error('Failed to update reply:', error)
+    editReplyErrors.value[replyId] = error.message || 'Failed to update reply'
+  } finally {
+    savingReply.value.delete(replyId)
+  }
 }
 
 const handleCreatePost = async () => {
@@ -493,6 +938,57 @@ onMounted(async () => {
   font-size: 1.25rem;
 }
 
+/* Board Navigation */
+.board-navigation {
+  margin-bottom: 2rem;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
+  padding: 0.5rem;
+  border-radius: 12px;
+  border: 2px solid #e7e5e4;
+}
+
+.nav-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #78716c;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.nav-tab:hover {
+  background: #fef3c7;
+  color: #1c1917;
+}
+
+.nav-tab.active {
+  background: #7c2d12;
+  color: white;
+  box-shadow: 0 2px 8px rgba(124, 45, 18, 0.3);
+}
+
+.nav-tab-link {
+  text-decoration: none;
+}
+
+.tab-icon {
+  font-size: 1.25rem;
+}
+
 /* Posts Section */
 .posts-section {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
@@ -618,14 +1114,27 @@ onMounted(async () => {
 .author-avatar {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
-  border: 2px solid #dbeafe;
+  border: 2px solid #e7e5e4;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.author-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.author-avatar .avatar-initials {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #92400e;
+  font-family: 'Sora', sans-serif;
 }
 
 .author-info {
@@ -637,6 +1146,140 @@ onMounted(async () => {
   font-weight: 600;
   color: #1c1917;
   font-size: 0.9375rem;
+}
+
+/* Edit Post Button */
+.edit-post-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.edit-post-btn:hover {
+  opacity: 1;
+  background: #fef3c7;
+}
+
+/* Edit Post Form */
+.edit-post-form {
+  background: #fafaf9;
+  border: 2px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e7e5e4;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+
+.edit-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e7e5e4;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.2s ease;
+  background: white;
+  min-height: 80px;
+}
+
+.edit-textarea:focus {
+  outline: none;
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+
+.edit-error {
+  background: #fef2f2;
+  color: #7c2d12;
+  padding: 0.625rem 0.875rem;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+  border-left: 3px solid #7c2d12;
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.cancel-edit-btn {
+  padding: 0.625rem 1.25rem;
+  background: white;
+  color: #78716c;
+  border: 2px solid #e7e5e4;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.cancel-edit-btn:hover {
+  border-color: #78716c;
+  background: #fafaf9;
+}
+
+.save-edit-btn {
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+  font-size: 0.875rem;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.save-edit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
+}
+
+.save-edit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Post Content */
@@ -694,14 +1337,314 @@ onMounted(async () => {
   font-size: 0.875rem;
 }
 
-.reply-count {
+.reply-count-btn {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #78716c;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.reply-count-btn:hover {
+  background: #fef3c7;
+  color: #1c1917;
+}
+
+.reply-count-btn.active {
+  background: #1e3a8a;
+  color: white;
+}
+
+.expand-icon {
+  font-size: 0.625rem;
+  margin-left: 0.25rem;
 }
 
 .meta-icon {
   font-size: 1rem;
+}
+
+/* Replies Section */
+.replies-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e7e5e4;
+}
+
+.replies-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.replies-header h4 {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1c1917;
+  margin: 0;
+}
+
+.add-reply-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+}
+
+.add-reply-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
+}
+
+.add-reply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  font-size: 1rem;
+}
+
+/* Reply Form */
+.reply-form {
+  background: #fafaf9;
+  border: 2px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.reply-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e7e5e4;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.reply-textarea:focus {
+  outline: none;
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+
+.reply-error {
+  background: #fef2f2;
+  color: #7c2d12;
+  padding: 0.625rem 0.875rem;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+  border-left: 3px solid #7c2d12;
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.reply-form-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.cancel-reply-btn {
+  padding: 0.625rem 1.25rem;
+  background: white;
+  color: #78716c;
+  border: 2px solid #e7e5e4;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.cancel-reply-btn:hover {
+  border-color: #78716c;
+  background: #fafaf9;
+}
+
+.submit-reply-btn {
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+  font-size: 0.875rem;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.submit-reply-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
+}
+
+.submit-reply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.replies-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  color: #78716c;
+  justify-content: center;
+}
+
+.small-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e7e5e4;
+  border-top: 2px solid #1e3a8a;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.replies-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reply-card {
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.reply-card:hover {
+  border-color: #d4d4d8;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.reply-author {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.reply-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e7e5e4;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.reply-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reply-avatar .avatar-initials {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #92400e;
+  font-family: 'Sora', sans-serif;
+}
+
+.reply-author-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.reply-author-name {
+  font-weight: 600;
+  color: #1c1917;
+  font-size: 0.9375rem;
+}
+
+.reply-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.edit-reply-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.375rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.edit-reply-btn:hover {
+  opacity: 1;
+  background: #fef3c7;
+}
+
+.edit-reply-form {
+  margin-top: 0.5rem;
+}
+
+.reply-body {
+  color: #1c1917;
+  line-height: 1.6;
+  margin: 0;
+  font-size: 0.9375rem;
+  white-space: pre-wrap;
+}
+
+.no-replies {
+  text-align: center;
+  padding: 2rem;
+  color: #78716c;
+}
+
+.no-replies-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.no-replies p {
+  margin: 0;
+  font-size: 0.9375rem;
 }
 
 /* Empty State */
