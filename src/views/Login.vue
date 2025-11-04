@@ -164,19 +164,20 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(180deg, #fef3c7 0%, #fef9e7 50%, #fafaf9 100%);
   padding: 2rem;
 }
 
 .login-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(124, 45, 18, 0.12);
   padding: 3rem;
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   position: relative;
   overflow: hidden;
+  border: 2px solid #e7e5e4;
 }
 
 .login-card::before {
@@ -186,7 +187,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: linear-gradient(90deg, #7c2d12 0%, #1e3a8a 50%, #d97706 100%);
 }
 
 .login-header {
@@ -195,15 +196,16 @@ onMounted(() => {
 }
 
 .login-header h1 {
-  color: #2c3e50;
+  font-family: 'Sora', sans-serif;
+  color: #7c2d12;
   font-size: 2.5rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0 0 0.5rem 0;
   letter-spacing: -0.5px;
 }
 
 .subtitle {
-  color: #7f8c8d;
+  color: #78716c;
   font-size: 1rem;
   margin: 0;
   font-weight: 400;
@@ -219,27 +221,28 @@ onMounted(() => {
 
 .form-group label {
   display: block;
-  color: #2c3e50;
+  color: #1c1917;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  letter-spacing: 0.3px;
 }
 
 .form-input {
   width: 100%;
   padding: 0.875rem 1rem;
-  border: 2px solid #e9ecef;
+  border: 2px solid #e7e5e4;
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.2s ease;
-  background-color: #fafbfc;
+  background-color: #fafaf9;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #7c2d12;
   background-color: white;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 3px rgba(124, 45, 18, 0.1);
 }
 
 .form-input:disabled {
@@ -249,18 +252,19 @@ onMounted(() => {
 }
 
 .error-message {
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: #fef2f2;
+  color: #7c2d12;
   padding: 0.75rem 1rem;
-  border-radius: 6px;
-  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  border-left: 3px solid #7c2d12;
   margin-bottom: 1rem;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 .login-button {
   width: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -268,18 +272,19 @@ onMounted(() => {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
 }
 
 .login-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
 }
 
 .login-button:active:not(:disabled) {
@@ -309,28 +314,29 @@ onMounted(() => {
 .login-footer {
   text-align: center;
   padding-top: 1rem;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid #e7e5e4;
 }
 
 .login-footer p {
-  color: #6c757d;
+  color: #78716c;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 .link-button {
   background: none;
   border: none;
-  color: #667eea;
+  color: #7c2d12;
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
   font-size: inherit;
   padding: 0;
+  transition: color 0.2s ease;
 }
 
 .link-button:hover {
-  color: #764ba2;
+  color: #92400e;
 }
 
 /* Responsive design */

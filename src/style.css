@@ -1,11 +1,24 @@
+/* Modern Academic Design System - Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
 :root {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.6;
   font-weight: 400;
   
-  /* Light theme as default */
-  color: #1a202c;
-  background-color: #f7fafc;
+  /* Refined Academic Color System */
+  --color-primary: #7c2d12; /* Deep Burgundy - sophisticated, classic academic */
+  --color-secondary: #1e3a8a; /* Deep Navy - professional, trustworthy */
+  --color-accent: #d97706; /* Amber - warm, intellectual */
+  --color-text: #1c1917; /* Rich Black - strong contrast */
+  --color-text-light: #78716c;
+  --color-bg: #fafaf9; /* Soft Stone - neutral, paper-like */
+  --color-surface: #ffffff;
+  --color-border: #e7e5e4;
+  --color-hover: #fef3c7; /* Warm highlight */
+  
+  color: var(--color-text);
+  background-color: var(--color-bg);
   
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -21,7 +34,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(180deg, #fef3c7 0%, #fef9e7 50%, #fafaf9 100%);
   background-attachment: fixed;
 }
 
@@ -33,13 +46,13 @@ body {
 
 a {
   font-weight: 500;
-  color: #667eea;
+  color: var(--color-primary);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 a:hover {
-  color: #5a67d8;
+  color: var(--color-secondary);
 }
 
 /* Global button styles */

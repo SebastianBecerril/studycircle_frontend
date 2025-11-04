@@ -8,7 +8,7 @@ After creating their community, their fraternity member shsould also be able to 
 
 ## Video
 
-[StudyCircle Frontend Demo](StudyCirclFrontend.mp4)
+[StudyCircle Frontend Demo](public/StudyCircle Frontend.mp4)
 
 ---
 

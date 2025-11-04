@@ -2,15 +2,19 @@
 
 This directory contains all your Vue components organized by feature.
 
-## Structure
+## Current Structure
 
 ```
 components/
-├── common/          # Reusable components (buttons, modals, etc.)
-├── auth/           # Authentication related components
-├── dashboard/      # Dashboard specific components
-└── [feature]/      # Feature-specific components
+├── common/          # Reusable components (empty - ready for future components)
+└── [feature]/      # Future: Feature-specific components
 ```
+
+As you build out features, you can add subdirectories for:
+- `auth/` - Authentication related components
+- `community/` - Community-specific components
+- `board/` - Community board components
+- `classes/` - Course/enrollment components
 
 ## Naming Convention
 

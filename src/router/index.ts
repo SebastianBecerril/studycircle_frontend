@@ -23,6 +23,11 @@ const routes = [
     component: () => import('../views/Community.vue')
   },
   {
+    path: '/community/:id',
+    name: 'CommunityBoard',
+    component: () => import('../views/CommunityBoard.vue')
+  },
+  {
     path: '/courses',
     name: 'Courses',
     component: () => import('../views/Courses.vue')

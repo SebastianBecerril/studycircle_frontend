@@ -61,24 +61,34 @@ onMounted(() => {
 }
 
 header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: #ffffff;
+  border-bottom: 2px solid #e7e5e4;
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 header h1 {
   margin: 0;
   font-size: 1.75rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-weight: 800;
+  color: #7c2d12;
+  font-family: 'Sora', sans-serif;
+  letter-spacing: -0.5px;
+  position: relative;
+  display: inline-block;
+}
+
+header h1::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 30%;
+  height: 2px;
+  background: linear-gradient(to right, #7c2d12, #1e3a8a);
+  border-radius: 2px;
 }
 
 nav {
@@ -88,57 +98,53 @@ nav {
 }
 
 nav a {
-  color: #4a5568;
+  color: #78716c;
   text-decoration: none;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.2s ease;
   font-weight: 500;
   position: relative;
 }
 
 nav a:hover {
-  background-color: #f7fafc;
-  color: #667eea;
-  transform: translateY(-1px);
+  background-color: #fef3c7;
+  color: #1c1917;
 }
 
 nav a.router-link-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #7c2d12;
   color: white;
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 4px rgba(124, 45, 18, 0.2);
 }
 
 .login-link {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%) !important;
+  background: #1e3a8a !important;
   color: white !important;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(72, 187, 120, 0.3);
+  box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);
 }
 
 .login-link:hover {
-  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%) !important;
+  background: #1e40af !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(72, 187, 120, 0.4);
+  box-shadow: 0 4px 8px rgba(30, 58, 138, 0.3);
 }
 
 .logout-button {
-  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  background: #292524;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(245, 101, 101, 0.3);
 }
 
 .logout-button:hover {
-  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(245, 101, 101, 0.4);
+  background: #1c1917;
 }
 
 main {
@@ -148,12 +154,11 @@ main {
 }
 
 footer {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
+  background: #ffffff;
   padding: 1rem 2rem;
   text-align: center;
-  color: #718096;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  color: #78716c;
+  border-top: 2px solid #e7e5e4;
 }
 
 /* Responsive design */

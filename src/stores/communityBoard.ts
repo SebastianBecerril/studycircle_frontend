@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { studyCircleApi } from '@/services/studyCircleApi'
 
 export interface Post {
   _id: string
@@ -127,6 +128,118 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     error.value = errorMessage
   }
 
+  const clearError = () => {
+    error.value = null
+  }
+
+  // API Actions
+  const fetchPostsByCommunity = async (communityId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await studyCircleApi.getPostsByCommunity(communityId)
+      console.log('Fetch posts response:', response)
+      // API returns array of posts directly
+      setPosts(response || [])
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch posts')
+      console.error('Error fetching posts:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchRepliesForPost = async (postId: string) => {
+    setError(null)
+    try {
+      const response = await studyCircleApi.getRepliesForPost(postId)
+      console.log('Fetch replies response:', response)
+      // API returns array of replies directly
+      const newReplies = response || []
+      
+      // Add replies that aren't already in the store
+      newReplies.forEach((reply: Reply) => {
+        if (!replies.value.find(r => r._id === reply._id)) {
+          addReply(reply)
+        }
+      })
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch replies')
+      console.error('Error fetching replies:', err)
+    }
+  }
+
+  const createPost = async (
+    author: string,
+    community: string,
+    title: string,
+    body: string,
+    tags: string[],
+    course: string = ''
+  ) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await studyCircleApi.createPost(author, community, title, body, tags, course)
+      console.log('Create post response:', response)
+      
+      // The API returns { posting: "postId" } or { post: "postId" }
+      const postId = response.posting || response.post
+      
+      if (postId) {
+        try {
+          const fullPost = await studyCircleApi.getPostById(postId)
+          console.log('Full post data:', fullPost)
+          
+          // The getPostById might return { post: postObject } or { posting: postObject }
+          const postData = fullPost.post || fullPost.posting || fullPost
+          
+          if (postData && postData._id) {
+            addPost(postData)
+            return postData
+          } else {
+            // Create basic post object
+            const basicPost: Post = {
+              _id: postId,
+              author,
+              community,
+              title,
+              body,
+              tags,
+              course,
+              replies: []
+            }
+            addPost(basicPost)
+            return basicPost
+          }
+        } catch (fetchError) {
+          console.warn('Could not fetch full post, creating basic post:', fetchError)
+          const basicPost: Post = {
+            _id: postId,
+            author,
+            community,
+            title,
+            body,
+            tags,
+            course,
+            replies: []
+          }
+          addPost(basicPost)
+          return basicPost
+        }
+      } else {
+        console.error('Full API response:', response)
+        throw new Error('No post ID returned from API')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to create post')
+      console.error('Error creating post:', err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     // State
     posts,
@@ -154,6 +267,12 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     removeReply,
     setCurrentPost,
     setLoading,
-    setError
+    setError,
+    clearError,
+    
+    // API Actions
+    fetchPostsByCommunity,
+    fetchRepliesForPost,
+    createPost
   }
 })

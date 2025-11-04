@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { studyCircleApi } from '@/services/studyCircleApi'
 
 export interface Enrollment {
   _id: string
@@ -88,6 +89,62 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     enrollments.value = []
   }
 
+  const clearError = () => {
+    error.value = null
+  }
+
+  // API Actions
+  const fetchEnrollmentsByOwner = async (userId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await studyCircleApi.getEnrollmentsByOwner(userId)
+      console.log('Fetch enrollments response:', response)
+      setEnrollments(response || [])
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch enrollments')
+      console.error('Error fetching enrollments:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createEnrollment = async (
+    owner: string,
+    course: string,
+    section: string,
+    visibility: boolean
+  ) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await studyCircleApi.addEnrollment(owner, course, section, visibility)
+      console.log('Create enrollment response:', response)
+      
+      const enrollmentId = response.enrollment
+      
+      if (enrollmentId) {
+        const newEnrollment: Enrollment = {
+          _id: enrollmentId,
+          owner,
+          course,
+          section,
+          visibility
+        }
+        addEnrollment(newEnrollment)
+        return newEnrollment
+      } else {
+        throw new Error('No enrollment ID returned from API')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to create enrollment')
+      console.error('Error creating enrollment:', err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     // State
     enrollments,
@@ -112,6 +169,11 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     updateEnrollmentSection,
     setLoading,
     setError,
-    clearEnrollments
+    clearEnrollments,
+    clearError,
+    
+    // API Actions
+    fetchEnrollmentsByOwner,
+    createEnrollment
   }
 })

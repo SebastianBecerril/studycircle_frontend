@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { studyCircleApi } from '@/services/studyCircleApi'
+import { useAuthStore } from './auth'
 
 export interface Community {
   _id: string
@@ -28,15 +29,21 @@ export const useCommunityStore = defineStore('community', () => {
 
   // Getters
   const userCommunities = computed(() => {
-    const userMemberships = memberships.value.filter(m => m.user === 'current-user-id') // Will be replaced with actual user ID
+    const auth = useAuthStore()
+    const userId = auth.userId
+    if (!userId) return []
+    const userMemberships = memberships.value.filter(m => m.user === userId)
     return communities.value.filter(c => 
       userMemberships.some(m => m.community === c._id)
     )
   })
 
   const adminCommunities = computed(() => {
+    const auth = useAuthStore()
+    const userId = auth.userId
+    if (!userId) return []
     const adminMemberships = memberships.value.filter(m => 
-      m.user === 'current-user-id' && m.role === 'ADMIN'
+      m.user === userId && m.role === 'ADMIN'
     )
     return communities.value.filter(c => 
       adminMemberships.some(m => m.community === c._id)
@@ -48,8 +55,11 @@ export const useCommunityStore = defineStore('community', () => {
   })
 
   const isUserAdmin = computed(() => (communityId: string) => {
+    const auth = useAuthStore()
+    const userId = auth.userId
+    if (!userId) return false
     const membership = memberships.value.find(m => 
-      m.community === communityId && m.user === 'current-user-id'
+      m.community === communityId && m.user === userId
     )
     return membership?.role === 'ADMIN'
   })
@@ -128,6 +138,19 @@ export const useCommunityStore = defineStore('community', () => {
       console.error('Error fetching communities:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchMemberships = async () => {
+    setError(null)
+    try {
+      const response = await studyCircleApi.getAllMemberships()
+      console.log('Fetch memberships response:', response)
+      // The API returns an array of memberships directly
+      setMemberships(response || [])
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch memberships')
+      console.error('Error fetching memberships:', err)
     }
   }
 
@@ -277,6 +300,7 @@ export const useCommunityStore = defineStore('community', () => {
     
     // API Actions
     fetchCommunities,
+    fetchMemberships,
     createCommunity,
     joinCommunity,
     leaveCommunity,

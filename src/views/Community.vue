@@ -4,7 +4,7 @@
     <div class="page-header">
       <div class="header-content">
         <h1>Communities</h1>
-        <p>Discover and join study communities or create your own</p>
+        <p>Create private study communities and collaborate with your classmates</p>
       </div>
       <button 
         @click="showCreateForm = true" 
@@ -81,22 +81,17 @@
         <p class="community-description">{{ communityItem?.description || 'No description available' }}</p>
         
         <div class="community-actions">
-          <button
-            v-if="communityItem?._id && !isUserMember(communityItem._id)"
-            @click="handleJoin(communityItem._id)"
-            :disabled="community.isLoading"
-            class="join-btn"
+          <router-link
+            v-if="communityItem?._id && isUserMember(communityItem._id)"
+            :to="`/community/${communityItem._id}`"
+            class="view-btn"
           >
-            Join Community
-          </button>
-          <button
-            v-else-if="communityItem?._id"
-            @click="handleLeave(communityItem._id)"
-            :disabled="community.isLoading"
-            class="leave-btn"
-          >
-            Leave Community
-          </button>
+            View Board
+          </router-link>
+          <div v-else class="private-badge">
+            <span class="lock-icon">🔒</span>
+            <span>Private Community</span>
+          </div>
         </div>
       </div>
 
@@ -222,30 +217,6 @@ const isUserMember = (communityId: string) => {
   )
 }
 
-const handleJoin = async (communityId: string) => {
-  try {
-    if (!auth.userId) {
-      throw new Error('User not authenticated')
-    }
-    await community.joinCommunity(communityId, auth.userId)
-    console.log('Successfully joined community:', communityId)
-  } catch (error: any) {
-    console.error('Failed to join community:', error)
-    console.error('Error details:', error.response?.data)
-  }
-}
-
-const handleLeave = async (communityId: string) => {
-  try {
-    if (!auth.userId) {
-      throw new Error('User not authenticated')
-    }
-    await community.leaveCommunity(communityId, auth.userId)
-  } catch (error) {
-    console.error('Failed to leave community:', error)
-  }
-}
-
 const handleCreateCommunity = async () => {
   try {
     if (!auth.userId) {
@@ -262,6 +233,9 @@ const handleCreateCommunity = async () => {
       name: createForm.value.name.trim(),
       description: createForm.value.description.trim()
     }, auth.userId)
+    
+    // Refetch memberships so the user sees themselves as a member
+    await community.fetchMemberships()
     
     console.log('Community created successfully')
     closeCreateForm()
@@ -296,6 +270,7 @@ onMounted(() => {
     isAuthenticated: auth.isAuthenticated
   })
   community.fetchCommunities()
+  community.fetchMemberships()
 })
 </script>
 
@@ -316,39 +291,37 @@ onMounted(() => {
 }
 
 .header-content h1 {
+  font-family: 'Sora', sans-serif;
   font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-weight: 800;
+  color: #7c2d12;
   margin: 0 0 0.5rem 0;
 }
 
 .header-content p {
-  color: #4a5568;
+  color: #78716c;
   font-size: 1.1rem;
   margin: 0;
 }
 
 .create-btn {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
 }
 
 .create-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
+  box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
 }
 
 .create-btn:disabled {
@@ -392,18 +365,17 @@ onMounted(() => {
 .search-input {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 3rem;
-  border: 2px solid #e2e8f0;
+  border: 2px solid #e7e5e4;
   border-radius: 12px;
   font-size: 1rem;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
+  background: #ffffff;
   transition: all 0.2s ease;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #7c2d12;
+  box-shadow: 0 0 0 3px rgba(124, 45, 18, 0.1);
 }
 
 .filter-buttons {
@@ -413,36 +385,40 @@ onMounted(() => {
 
 .filter-btn {
   padding: 0.5rem 1rem;
-  border: 2px solid #e2e8f0;
-  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #e7e5e4;
+  background: #ffffff;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
+  color: #78716c;
 }
 
 .filter-btn:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #7c2d12;
+  background: #fef3c7;
+  color: #1c1917;
 }
 
 .filter-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #7c2d12;
   color: white;
-  border-color: transparent;
+  border-color: #7c2d12;
+  box-shadow: 0 2px 4px rgba(124, 45, 18, 0.2);
 }
 
 /* Error Message */
 .error-message {
-  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
-  color: #742a2a;
+  background: #fef2f2;
+  color: #7c2d12;
   padding: 1rem 1.5rem;
   border-radius: 8px;
-  border-left: 4px solid #f56565;
+  border-left: 4px solid #7c2d12;
   margin-bottom: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid #fecaca;
 }
 
 .close-btn {
@@ -492,18 +468,36 @@ onMounted(() => {
 }
 
 .community-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
   border-radius: 16px;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
+  border: 2px solid #e7e5e4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.community-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #7c2d12 0%, #1e3a8a 50%, #d97706 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.community-card:hover::before {
+  opacity: 1;
 }
 
 .community-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: #7c2d12;
+  box-shadow: 0 12px 24px rgba(124, 45, 18, 0.12);
 }
 
 .community-header {
@@ -551,45 +545,43 @@ onMounted(() => {
   gap: 0.75rem;
 }
 
-.join-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.view-btn {
+  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
   color: white;
-  border: none;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   flex: 1;
+  text-decoration: none;
+  text-align: center;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(124, 45, 18, 0.3);
 }
 
-.join-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+.view-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 45, 18, 0.4);
 }
 
-.leave-btn {
-  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-  color: white;
-  border: none;
+.private-badge {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   padding: 0.5rem 1rem;
+  background: #fafaf9;
+  border: 2px solid #e7e5e4;
   border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex: 1;
+  color: #78716c;
+  font-weight: 500;
+  font-size: 0.875rem;
 }
 
-.leave-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
-}
-
-.join-btn:disabled,
-.leave-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
+.lock-icon {
+  font-size: 1rem;
 }
 
 /* Empty State */
@@ -737,21 +729,22 @@ onMounted(() => {
 
 .submit-btn {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
   color: white;
   border: none;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
 }
 
 .submit-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
 }
 
 .submit-btn:disabled {
