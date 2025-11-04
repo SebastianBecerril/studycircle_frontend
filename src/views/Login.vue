@@ -164,20 +164,20 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #fef3c7 0%, #fef9e7 50%, #fafaf9 100%);
+  background: linear-gradient(180deg, #E8F5E9 0%, #F1F8F4 50%, #FAFAF9 100%);
   padding: 2rem;
 }
 
 .login-card {
-  background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
+  background: #FFFFFF;
   border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(124, 45, 18, 0.12);
+  box-shadow: 0 12px 40px rgba(46, 125, 50, 0.15);
   padding: 3rem;
   width: 100%;
   max-width: 440px;
   position: relative;
   overflow: hidden;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
 }
 
 .login-card::before {
@@ -186,8 +186,8 @@ onMounted(() => {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #7c2d12 0%, #1e3a8a 50%, #d97706 100%);
+  height: 3px;
+  background: linear-gradient(90deg, #2E7D32 0%, #0D9488 100%);
 }
 
 .login-header {
@@ -196,19 +196,22 @@ onMounted(() => {
 }
 
 .login-header h1 {
-  font-family: 'Sora', sans-serif;
-  color: #7c2d12;
-  font-size: 2.5rem;
-  font-weight: 800;
+  font-family: 'DM Serif Display', Georgia, serif;
+  color: #2E7D32;
+  font-size: 2.25rem; /* 36px - H1 */
+  font-weight: 400;
   margin: 0 0 0.5rem 0;
   letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
 .subtitle {
-  color: #78716c;
-  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+  color: #0F172A;
+  font-size: 1rem; /* 16px */
   margin: 0;
   font-weight: 400;
+  line-height: 1.45;
 }
 
 .login-form {
@@ -221,28 +224,30 @@ onMounted(() => {
 
 .form-group label {
   display: block;
-  color: #1c1917;
+  color: #0F172A;
   font-weight: 600;
+  font-family: 'Inter', sans-serif;
   margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  font-size: 0.875rem; /* 14px - Small */
   letter-spacing: 0.3px;
 }
 
 .form-input {
   width: 100%;
   padding: 0.875rem 1rem;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1rem; /* 16px */
+  font-family: 'Inter', sans-serif;
   transition: all 0.2s ease;
-  background-color: #fafaf9;
+  background-color: #F8FAFC;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #7c2d12;
+  border-color: #2E7D32;
   background-color: white;
-  box-shadow: 0 0 0 3px rgba(124, 45, 18, 0.1);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
 }
 
 .form-input:disabled {
@@ -252,24 +257,26 @@ onMounted(() => {
 }
 
 .error-message {
-  background-color: #fef2f2;
-  color: #7c2d12;
+  background-color: #FEE2E2;
+  color: #991B1B;
   padding: 0.75rem 1rem;
   border-radius: 8px;
-  border: 1px solid #fecaca;
-  border-left: 3px solid #7c2d12;
+  border: 1px solid #FCA5A5;
+  border-left: 3px solid #EF4444;
   margin-bottom: 1rem;
-  font-size: 0.875rem;
+  font-size: 0.875rem; /* 14px - Small */
+  font-family: 'Inter', sans-serif;
 }
 
 .login-button {
   width: 100%;
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-  color: white;
+  background: #2E7D32;
+  color: #F8FAFC;
   border: none;
   padding: 1rem 2rem;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1rem; /* 16px */
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -279,12 +286,13 @@ onMounted(() => {
   gap: 0.5rem;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
 }
 
 .login-button:hover:not(:disabled) {
+  background: #256528;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
 }
 
 .login-button:active:not(:disabled) {
@@ -314,19 +322,21 @@ onMounted(() => {
 .login-footer {
   text-align: center;
   padding-top: 1rem;
-  border-top: 1px solid #e7e5e4;
+  border-top: 1px solid #E5E7EB;
 }
 
 .login-footer p {
-  color: #78716c;
+  font-family: 'Inter', sans-serif;
+  color: #0F172A;
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.875rem; /* 14px - Small */
 }
 
 .link-button {
   background: none;
   border: none;
-  color: #7c2d12;
+  color: #0D9488;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
@@ -336,7 +346,7 @@ onMounted(() => {
 }
 
 .link-button:hover {
-  color: #92400e;
+  color: #0A7C72;
 }
 
 /* Responsive design */
@@ -350,7 +360,7 @@ onMounted(() => {
   }
   
   .login-header h1 {
-    font-size: 2rem;
+    font-size: 1.75rem; /* 28px - H2 on mobile */
   }
 }
 </style>

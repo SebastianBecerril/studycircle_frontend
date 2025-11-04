@@ -108,7 +108,12 @@
 
             <div class="info-group">
               <label class="info-label">User ID</label>
-              <p class="info-value user-id">{{ auth.userId?.slice(0, 16) }}...</p>
+              <div class="info-value-row">
+                <p class="info-value user-id">{{ auth.userId }}</p>
+                <button @click="copyUserId" class="copy-btn" :title="copySuccess ? 'Copied!' : 'Copy to clipboard'">
+                  {{ copySuccess ? '✓' : '📋' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -294,19 +299,24 @@
             </div>
             
             <div v-else class="classes-grid">
-              <div v-for="enrollment in myEnrollments" :key="enrollment._id" class="class-item">
+              <div v-for="enrollment in enrichedEnrollments" :key="enrollment._id" class="class-item">
                 <div class="class-header">
-                  <h4 class="class-code">{{ enrollment.course }}</h4>
-                  <span class="class-term">{{ enrollment.term }}</span>
+                  <h4 class="class-code">
+                    {{ enrollment.courseNumber || enrollment.course }}: {{ enrollment.courseName || 'Unknown Course' }}
+                  </h4>
+                  <span class="class-term">{{ enrollment.termName || enrollment.term }}</span>
                 </div>
-                <p class="class-section">Section {{ enrollment.section }}</p>
-                <div v-if="enrollment.meetingTime" class="class-time">
-                  <span class="time-icon">🕒</span>
-                  {{ enrollment.meetingTime }}
-                </div>
+                <p class="class-section">
+                  {{ enrollment.sectionType || 'Section' }}
+                  <span v-if="enrollment.days || enrollment.startTime"> - {{ enrollment.days }} {{ enrollment.startTime }}<span v-if="enrollment.endTime">-{{ enrollment.endTime }}</span></span>
+                </p>
                 <div v-if="enrollment.location" class="class-location">
                   <span class="location-icon">📍</span>
                   {{ enrollment.location }}
+                </div>
+                <div v-if="enrollment.instructor" class="class-instructor">
+                  <span class="instructor-icon">👨‍🏫</span>
+                  {{ enrollment.instructor }}
                 </div>
               </div>
             </div>
@@ -356,7 +366,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStores } from '@/composables/useStores'
 
-const { auth, userProfile, userEnrollments, community } = useStores()
+const { auth, userProfile, userEnrollments, community, courseCatalog } = useStores()
 
 const isLoading = ref(true)
 const error = ref('')
@@ -370,6 +380,7 @@ const showEditAvatar = ref(false)
 
 const enrollmentsLoading = ref(false)
 const communitiesLoading = ref(false)
+const copySuccess = ref(false)
 
 const createForm = ref({
   displayName: ''
@@ -385,6 +396,29 @@ const myEnrollments = computed(() => {
   return userEnrollments.enrollments.filter(e => e.owner === auth.userId)
 })
 
+// Enriched enrollments with course and section data
+const enrichedEnrollments = computed(() => {
+  return myEnrollments.value.map(enrollment => {
+    const course = courseCatalog.courses.find(c => c._id === enrollment.course)
+    const section = courseCatalog.sections.find(s => s._id === enrollment.section)
+    const term = courseCatalog.terms.find(t => t._id === enrollment.term)
+    
+    return {
+      ...enrollment,
+      courseNumber: course?.courseNumber,
+      courseName: course?.courseName, // Fixed: was course?.name
+      department: course?.department,
+      sectionType: section?.classType,
+      days: section?.days?.join(', '),
+      startTime: section?.startTime,
+      endTime: section?.endTime,
+      location: section?.location,
+      instructor: section?.instructor,
+      termName: term?.name
+    }
+  })
+})
+
 const myCommunities = computed(() => {
   if (!auth.userId) return []
   return community.communities.filter(c => 
@@ -398,6 +432,22 @@ const truncate = (text: string, maxLength: number) => {
   if (text.length <= maxLength) return text
   return text.slice(0, maxLength).trim() + '...'
 }
+
+// Copy user ID to clipboard
+const copyUserId = async () => {
+  if (!auth.userId) return
+  
+  try {
+    await navigator.clipboard.writeText(auth.userId)
+    copySuccess.value = true
+    setTimeout(() => {
+      copySuccess.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
+}
+
 
 const getInitials = (name: string) => {
   if (!name) return '?'
@@ -442,7 +492,13 @@ const fetchEnrollments = async () => {
   try {
     enrollmentsLoading.value = true
     if (auth.userId) {
-      await userEnrollments.fetchEnrollmentsByOwner(auth.userId)
+      // Fetch enrollments and course catalog data
+      await Promise.all([
+        userEnrollments.fetchEnrollmentsByOwner(auth.userId),
+        courseCatalog.fetchAllCourses(),
+        courseCatalog.fetchAllSections(),
+        courseCatalog.fetchAllTerms()
+      ])
     }
   } catch (err: any) {
     console.error('Error loading enrollments:', err)
@@ -629,7 +685,7 @@ onMounted(() => {
   width: 48px;
   height: 48px;
   border: 4px solid #e7e5e4;
-  border-top: 4px solid #1e3a8a;
+  border-top: 4px solid #2E7D32;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -640,7 +696,7 @@ onMounted(() => {
 }
 
 .loading-container p {
-  color: #78716c;
+  color: #0F172A;
   font-size: 1rem;
 }
 
@@ -650,20 +706,20 @@ onMounted(() => {
 }
 
 .error-container h2 {
-  font-family: 'Sora', sans-serif;
-  color: #7c2d12;
+  font-family: 'DM Serif Display', Georgia, serif;
+  color: #2E7D32;
   font-size: 2rem;
   margin: 0 0 1rem 0;
 }
 
 .error-container p {
-  color: #78716c;
+  color: #0F172A;
   margin-bottom: 2rem;
 }
 
 .retry-btn {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  background: #2E7D32;
   color: white;
   border: none;
   border-radius: 8px;
@@ -695,17 +751,17 @@ onMounted(() => {
 }
 
 .profile-header h1 {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 2.5rem;
   font-weight: 800;
-  color: #7c2d12;
+  color: #2E7D32;
   margin: 0 0 0.5rem 0;
   letter-spacing: -0.5px;
 }
 
 .header-subtitle {
   font-size: 1.125rem;
-  color: #78716c;
+  color: #0F172A;
   margin: 0;
 }
 
@@ -719,7 +775,7 @@ onMounted(() => {
 
 .create-profile-card {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 20px;
   padding: 3rem 2.5rem;
   max-width: 500px;
@@ -736,7 +792,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #7c2d12 0%, #1e3a8a 50%, #d97706 100%);
+  background: linear-gradient(90deg, #2E7D32 0%, #0D9488 100%);
   border-radius: 20px 20px 0 0;
 }
 
@@ -752,15 +808,15 @@ onMounted(() => {
 }
 
 .create-profile-card h2 {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 2rem;
   font-weight: 700;
-  color: #7c2d12;
+  color: #2E7D32;
   margin: 0 0 1rem 0;
 }
 
 .create-profile-card > p {
-  color: #78716c;
+  color: #0F172A;
   font-size: 1rem;
   margin: 0 0 2rem 0;
   line-height: 1.6;
@@ -774,7 +830,7 @@ onMounted(() => {
 
 .profile-display-card {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 20px;
   padding: 2.5rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
@@ -788,7 +844,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #7c2d12 0%, #1e3a8a 50%, #d97706 100%);
+  background: linear-gradient(90deg, #2E7D32 0%, #0D9488 100%);
   border-radius: 20px 20px 0 0;
 }
 
@@ -823,15 +879,15 @@ onMounted(() => {
 .avatar-placeholder {
   font-size: 3rem;
   font-weight: 700;
-  color: #92400e;
-  font-family: 'Sora', sans-serif;
+  color: #0A7C72;
+  font-family: 'DM Serif Display', Georgia, serif;
 }
 
 .edit-avatar-btn {
   padding: 0.5rem 1rem;
   background: white;
   color: #1c1917;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -840,8 +896,8 @@ onMounted(() => {
 }
 
 .edit-avatar-btn:hover {
-  border-color: #7c2d12;
-  background: #fef3c7;
+  border-color: #2E7D32;
+  background: #E8F5E9;
 }
 
 .profile-info-section {
@@ -859,7 +915,7 @@ onMounted(() => {
 .info-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #78716c;
+  color: #0F172A;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -887,8 +943,42 @@ onMounted(() => {
 
 .user-id {
   font-family: 'Space Mono', monospace;
-  font-size: 0.9375rem;
-  color: #78716c;
+  font-size: 0.875rem;
+  color: #0F172A;
+  word-break: break-all;
+  background: #F8FAFC;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
+  line-height: 1.6;
+}
+
+.copy-btn {
+  padding: 0.5rem 0.75rem;
+  background: #FFFFFF;
+  border: 2px solid #E5E7EB;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.125rem;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  font-family: 'Inter', sans-serif;
+  color: #0F172A;
+  min-width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-btn:hover {
+  background: #E8F5E9;
+  border-color: #2E7D32;
+  transform: scale(1.05);
+}
+
+.copy-btn:active {
+  transform: scale(0.95);
 }
 
 .edit-icon-btn {
@@ -903,7 +993,7 @@ onMounted(() => {
 }
 
 .edit-icon-btn:hover {
-  background: #fef3c7;
+  background: #E8F5E9;
   transform: scale(1.1);
 }
 
@@ -929,7 +1019,7 @@ onMounted(() => {
 .form-textarea {
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.2s ease;
@@ -940,7 +1030,7 @@ onMounted(() => {
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #7c2d12;
+  border-color: #2E7D32;
   background: white;
   box-shadow: 0 0 0 3px rgba(124, 45, 18, 0.1);
 }
@@ -953,17 +1043,17 @@ onMounted(() => {
 .input-hint {
   display: block;
   font-size: 0.8125rem;
-  color: #78716c;
+  color: #0F172A;
   margin-top: 0.375rem;
 }
 
 .error-message {
   background: #fef2f2;
-  color: #7c2d12;
+  color: #2E7D32;
   padding: 0.875rem 1rem;
   border-radius: 8px;
   border: 1px solid #fecaca;
-  border-left: 3px solid #7c2d12;
+  border-left: 3px solid #EF4444;
   margin-bottom: 1.5rem;
   font-size: 0.875rem;
   display: flex;
@@ -997,7 +1087,7 @@ onMounted(() => {
 .submit-btn {
   width: 100%;
   padding: 0.875rem 1.5rem;
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  background: #2E7D32;
   color: white;
   border: none;
   border-radius: 8px;
@@ -1059,7 +1149,7 @@ onMounted(() => {
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
 }
 
 @keyframes slideUp {
@@ -1073,12 +1163,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(90deg, #7c2d12 0%, #1e3a8a 50%, #d97706 100%);
+  background: linear-gradient(90deg, #2E7D32 0%, #0D9488 100%);
   border-radius: 14px 14px 0 0;
 }
 
 .modal-header h2 {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.5rem;
   font-weight: 700;
   color: white;
@@ -1121,8 +1211,8 @@ onMounted(() => {
 .cancel-btn {
   padding: 0.75rem 1.5rem;
   background: white;
-  color: #78716c;
-  border: 2px solid #e7e5e4;
+  color: #0F172A;
+  border: 2px solid #E5E7EB;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -1131,7 +1221,7 @@ onMounted(() => {
 }
 
 .cancel-btn:hover {
-  border-color: #78716c;
+  border-color: #0F172A;
   background: #fafaf9;
 }
 
@@ -1145,14 +1235,14 @@ onMounted(() => {
   margin-top: 1rem;
   padding: 1rem;
   background: #fafaf9;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 12px;
 }
 
 .preview-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #78716c;
+  color: #0F172A;
   margin: 0 0 0.75rem 0;
 }
 
@@ -1165,7 +1255,7 @@ onMounted(() => {
 }
 
 .preview-error {
-  color: #7c2d12;
+  color: #2E7D32;
   font-size: 0.875rem;
   margin: 0.5rem 0 0 0;
 }
@@ -1176,10 +1266,10 @@ onMounted(() => {
 }
 
 .section-title {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 2rem;
   font-weight: 700;
-  color: #7c2d12;
+  color: #2E7D32;
   margin: 0 0 1.5rem 0;
   text-align: center;
 }
@@ -1193,7 +1283,7 @@ onMounted(() => {
 
 .stat-card {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 16px;
   padding: 1.5rem;
   display: flex;
@@ -1218,10 +1308,10 @@ onMounted(() => {
 }
 
 .stat-value {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 2rem;
   font-weight: 800;
-  color: #1e3a8a;
+  color: #0D9488;
   line-height: 1;
   margin-bottom: 0.25rem;
 }
@@ -1229,7 +1319,7 @@ onMounted(() => {
 .stat-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #78716c;
+  color: #0F172A;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1240,7 +1330,7 @@ onMounted(() => {
 }
 
 .subsection-title {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.5rem;
   font-weight: 700;
   color: #1c1917;
@@ -1253,7 +1343,7 @@ onMounted(() => {
   gap: 0.75rem;
   padding: 2rem;
   justify-content: center;
-  color: #78716c;
+  color: #0F172A;
 }
 
 .loading-spinner.small {
@@ -1268,7 +1358,7 @@ onMounted(() => {
   background: #fafaf9;
   border: 2px dashed #e7e5e4;
   border-radius: 12px;
-  color: #78716c;
+  color: #0F172A;
 }
 
 .empty-context p {
@@ -1276,7 +1366,7 @@ onMounted(() => {
 }
 
 .context-link {
-  color: #1e3a8a;
+  color: #0D9488;
   font-weight: 600;
   text-decoration: none;
   display: inline-flex;
@@ -1286,7 +1376,7 @@ onMounted(() => {
 }
 
 .context-link:hover {
-  color: #7c2d12;
+  color: #2E7D32;
   transform: translateX(4px);
 }
 
@@ -1299,7 +1389,7 @@ onMounted(() => {
 
 .class-item {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 12px;
   padding: 1.25rem;
   transition: all 0.3s ease;
@@ -1309,29 +1399,32 @@ onMounted(() => {
 .class-item:hover {
   transform: translateY(-4px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-  border-color: #7c2d12;
+  border-color: #2E7D32;
 }
 
 .class-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 1rem;
   margin-bottom: 0.5rem;
 }
 
 .class-code {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.125rem;
-  font-weight: 700;
-  color: #1e3a8a;
+  font-weight: 400;
+  color: #2E7D32;
   margin: 0;
+  line-height: 1.4;
+  flex: 1;
 }
 
 .class-term {
   font-size: 0.75rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  background: #0D9488;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
   text-transform: uppercase;
@@ -1339,16 +1432,19 @@ onMounted(() => {
 }
 
 .class-section {
-  font-size: 0.9375rem;
-  color: #57534e;
-  margin: 0 0 0.75rem 0;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+  color: #0F172A;
+  margin: 0 0 0.5rem 0;
+  font-weight: 500;
 }
 
 .class-time,
-.class-location {
+.class-location,
+.class-instructor {
   font-size: 0.875rem;
-  color: #78716c;
+  font-family: 'Inter', sans-serif;
+  color: #0F172A;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1356,7 +1452,8 @@ onMounted(() => {
 }
 
 .time-icon,
-.location-icon {
+.location-icon,
+.instructor-icon {
   font-size: 1rem;
 }
 
@@ -1372,7 +1469,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 12px;
   padding: 1.5rem;
   text-decoration: none;
@@ -1383,7 +1480,7 @@ onMounted(() => {
 .community-item:hover {
   transform: translateX(8px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-  border-color: #7c2d12;
+  border-color: #2E7D32;
 }
 
 .community-info {
@@ -1391,10 +1488,10 @@ onMounted(() => {
 }
 
 .community-name {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1e3a8a;
+  color: #0D9488;
   margin: 0 0 0.5rem 0;
 }
 
@@ -1409,7 +1506,7 @@ onMounted(() => {
   display: flex;
   gap: 1rem;
   font-size: 0.875rem;
-  color: #78716c;
+  color: #0F172A;
 }
 
 .member-count {
@@ -1418,7 +1515,7 @@ onMounted(() => {
 
 .community-arrow {
   font-size: 1.5rem;
-  color: #7c2d12;
+  color: #2E7D32;
   font-weight: 700;
   transition: transform 0.3s ease;
   flex-shrink: 0;

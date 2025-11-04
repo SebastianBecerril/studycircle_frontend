@@ -1,24 +1,33 @@
-/* Modern Academic Design System - Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+/* Academic Minimal Design System - Study Sage */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
+  /* Typography */
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  line-height: 1.6;
+  line-height: 1.45;
   font-weight: 400;
+  font-size: 16px;
   
-  /* Refined Academic Color System */
-  --color-primary: #7c2d12; /* Deep Burgundy - sophisticated, classic academic */
-  --color-secondary: #1e3a8a; /* Deep Navy - professional, trustworthy */
-  --color-accent: #d97706; /* Amber - warm, intellectual */
-  --color-text: #1c1917; /* Rich Black - strong contrast */
-  --color-text-light: #78716c;
-  --color-bg: #fafaf9; /* Soft Stone - neutral, paper-like */
-  --color-surface: #ffffff;
-  --color-border: #e7e5e4;
-  --color-hover: #fef3c7; /* Warm highlight */
+  /* Green + Teal Color System - Fresh & Collaborative */
+  --color-primary: #2E7D32; /* Deep green - primary actions */
+  --color-primary-hover: #256528; /* Dark green hover */
+  --color-accent: #0D9488; /* Teal - secondary/collaborative */
+  --color-accent-hover: #0A7C72; /* Dark teal hover */
+  --color-success: #22C55E; /* Bright green */
+  --color-warning: #F59E0B; /* Amber */
+  --color-danger: #EF4444; /* Red */
+  --color-surface-light: #FFFFFF; /* White */
+  --color-surface-dark: #0F172A; /* Dark slate */
+  --color-text-light: #0F172A; /* Dark text on light bg */
+  --color-text-dark: #F8FAFC; /* Light text on dark bg */
+  --color-border-light: #E5E7EB; /* Light gray border */
+  --color-border-dark: #1F2937; /* Dark border */
+  --color-bg-light: #FAFAF9; /* Off-white background */
+  --color-hover: #E8F5E9; /* Light green hover */
+  --color-hover-teal: #CCFBF1; /* Light teal hover */
   
-  color: var(--color-text);
-  background-color: var(--color-bg);
+  color: var(--color-text-light);
+  background-color: var(--color-bg-light);
   
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -34,7 +43,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, #fef3c7 0%, #fef9e7 50%, #fafaf9 100%);
+  background: linear-gradient(180deg, #E8F5E9 0%, #F1F8F4 50%, #FAFAF9 100%);
   background-attachment: fixed;
 }
 
@@ -52,7 +61,7 @@ a {
 }
 
 a:hover {
-  color: var(--color-secondary);
+  color: var(--color-accent);
 }
 
 /* Global button styles */
@@ -67,7 +76,7 @@ button {
 }
 
 button:focus {
-  outline: 2px solid #667eea;
+  outline: 2px solid #2E7D32;
   outline-offset: 2px;
 }
 
@@ -84,8 +93,8 @@ input, textarea, select {
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #2E7D32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
 }
 
 /* Card styles */

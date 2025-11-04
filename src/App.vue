@@ -1,7 +1,9 @@
 <template>
   <div id="app">
     <header>
-      <h1>StudyCircle</h1>
+      <router-link to="/" class="logo-link">
+        <h1>StudyCircle</h1>
+      </router-link>
       <nav>
         <router-link to="/">Home</router-link>
         <router-link to="/community">Communities</router-link>
@@ -151,22 +153,38 @@ const vClickOutside = {
 
 header {
   background: #ffffff;
-  border-bottom: 2px solid #e7e5e4;
+  border-bottom: 2px solid #E5E7EB;
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.logo-link {
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.logo-link:hover {
+  opacity: 0.85;
 }
 
 header h1 {
   margin: 0;
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: #7c2d12;
-  font-family: 'Sora', sans-serif;
+  font-size: 1.75rem; /* 28px - H2 */
+  font-weight: 400;
+  color: #2E7D32;
+  font-family: 'DM Serif Display', Georgia, serif;
   letter-spacing: -0.5px;
   position: relative;
   display: inline-block;
+  line-height: 1.3;
+  transition: color 0.2s ease;
+}
+
+.logo-link:hover h1 {
+  color: #0D9488;
 }
 
 header h1::after {
@@ -176,8 +194,17 @@ header h1::after {
   left: 0;
   width: 30%;
   height: 2px;
-  background: linear-gradient(to right, #7c2d12, #1e3a8a);
+  background: linear-gradient(to right, #2E7D32, #0D9488);
   border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.logo-link:hover h1::after {
+  width: 50%;
+}
+
+.logo-link:active h1 {
+  color: #2E7D32;
 }
 
 nav {
@@ -187,37 +214,39 @@ nav {
 }
 
 nav a {
-  color: #78716c;
+  color: #374151;
   text-decoration: none;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   transition: all 0.2s ease;
   font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9375rem;
   position: relative;
 }
 
 nav a:hover {
-  background-color: #fef3c7;
-  color: #1c1917;
+  background-color: #E8F5E9;
+  color: #1F2937;
 }
 
 nav a.router-link-active {
-  background: #7c2d12;
+  background: #2E7D32;
   color: white;
-  box-shadow: 0 2px 4px rgba(124, 45, 18, 0.2);
+  box-shadow: 0 2px 4px rgba(46, 125, 50, 0.2);
 }
 
 .login-link {
-  background: #1e3a8a !important;
-  color: white !important;
+  background: #0D9488 !important;
+  color: #F8FAFC !important;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);
+  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.2);
 }
 
 .login-link:hover {
-  background: #1e40af !important;
+  background: #0A7C72 !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(30, 58, 138, 0.3);
+  box-shadow: 0 4px 8px rgba(13, 148, 136, 0.3);
 }
 
 /* User Menu */
@@ -233,13 +262,13 @@ nav a.router-link-active {
   padding: 0.375rem 0.75rem;
   border-radius: 8px;
   transition: all 0.2s ease;
-  background: #fafaf9;
-  border: 2px solid #e7e5e4;
+  background: #F9FAFB;
+  border: 2px solid #E5E7EB;
 }
 
 .user-menu-trigger:hover {
-  background: #fef3c7;
-  border-color: #d97706;
+  background: #E8F5E9;
+  border-color: #2E7D32;
 }
 
 .user-avatar {
@@ -247,11 +276,11 @@ nav a.router-link-active {
   height: 32px;
   border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  background: linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   flex-shrink: 0;
 }
 
@@ -262,25 +291,26 @@ nav a.router-link-active {
 }
 
 .avatar-initials {
-  font-size: 0.875rem;
+  font-size: 0.875rem; /* 14px - Small */
   font-weight: 700;
-  color: #92400e;
-  font-family: 'Sora', sans-serif;
+  color: #256528;
+  font-family: 'Inter', sans-serif;
 }
 
 .user-name {
   font-weight: 600;
-  color: #1c1917;
+  color: #0F172A;
   font-size: 0.9375rem;
   max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: 'Inter', sans-serif;
 }
 
 .dropdown-icon {
   font-size: 0.625rem;
-  color: #78716c;
+  color: #6B7280;
   transition: transform 0.2s ease;
 }
 
@@ -293,7 +323,7 @@ nav a.router-link-active {
   top: calc(100% + 0.5rem);
   right: 0;
   background: white;
-  border: 2px solid #e7e5e4;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   min-width: 200px;
@@ -309,18 +339,19 @@ nav a.router-link-active {
   width: 100%;
   border: none;
   background: white;
-  color: #1c1917;
+  color: #0F172A;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.9375rem;
   font-weight: 500;
   text-align: left;
-  font-family: inherit;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.45;
 }
 
 .menu-item:hover {
-  background: #fef3c7;
+  background: #E8F5E9;
 }
 
 .menu-icon {
@@ -330,16 +361,16 @@ nav a.router-link-active {
 
 .menu-divider {
   height: 1px;
-  background: #e7e5e4;
+  background: #E5E7EB;
   margin: 0;
 }
 
 .logout-item {
-  color: #7c2d12;
+  color: #EF4444;
 }
 
 .logout-item:hover {
-  background: #fef2f2;
+  background: #FEE2E2;
 }
 
 /* Dropdown transition */
@@ -364,8 +395,10 @@ footer {
   background: #ffffff;
   padding: 1rem 2rem;
   text-align: center;
-  color: #78716c;
-  border-top: 2px solid #e7e5e4;
+  color: #6B7280;
+  border-top: 1px solid #E5E7EB;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem; /* 14px - Small */
 }
 
 /* Responsive design */

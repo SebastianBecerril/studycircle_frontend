@@ -20,12 +20,12 @@
     <div v-else-if="currentCommunity" class="schedule-content">
       <!-- Header -->
       <div class="schedule-header">
-        <router-link :to="`/community/${communityId}`" class="back-link">
+        <router-link :to="`/community/${communityId}`" class="back-btn">
           ← Back to Board
         </router-link>
         
         <div class="header-content">
-          <h1 class="schedule-title">{{ currentCommunity.name }} - Shared Schedule</h1>
+          <h1 class="schedule-title">{{ currentCommunity.name }}</h1>
           <p class="schedule-subtitle">Find classmates and form study groups</p>
         </div>
 
@@ -57,6 +57,13 @@
           >
             <span class="tab-icon">💬</span>
             Board
+          </router-link>
+          <router-link 
+            :to="`/community/${communityId}?tab=members`"
+            class="nav-tab nav-tab-link"
+          >
+            <span class="tab-icon">👥</span>
+            Members
           </router-link>
           <button class="nav-tab active">
             <span class="tab-icon">📚</span>
@@ -147,7 +154,7 @@
                 <div class="section-header">
                   <div class="section-info">
                     <span class="section-type">{{ section.classType }}</span>
-                    <span class="section-time">{{ section.days.join(', ') }} {{ section.startTime }}-{{ section.endTime }}</span>
+                    <span class="section-time">{{ formatDays(section.days) }} {{ formatTime(section.startTime) }}-{{ formatTime(section.endTime) }}</span>
                     <span class="section-location">📍 {{ section.location }}</span>
                     <span class="section-instructor">👤 {{ section.instructor }}</span>
                   </div>
@@ -259,7 +266,7 @@
                   @mouseleave="hoverClass = null"
                 >
                   <div class="class-content">
-                    <div class="class-time">{{ classItem.startTime }}-{{ classItem.endTime }}</div>
+                    <div class="class-time">{{ formatTime(classItem.startTime) }}-{{ formatTime(classItem.endTime) }}</div>
                     <div class="class-code">{{ classItem.courseNumber }}</div>
                     <div class="class-location">{{ classItem.location }}</div>
                     <div v-if="classItem.classmateCount > 0" class="classmate-badge">
@@ -298,7 +305,7 @@
             <div class="modal-body">
               <div class="modal-section">
                 <div class="modal-label">Time:</div>
-                <div>{{ selectedClass.days.join(', ') }} {{ selectedClass.startTime }}-{{ selectedClass.endTime }}</div>
+                <div>{{ formatDays(selectedClass.days) }} {{ formatTime(selectedClass.startTime) }}-{{ formatTime(selectedClass.endTime) }}</div>
               </div>
               <div class="modal-section">
                 <div class="modal-label">Location:</div>
@@ -449,7 +456,7 @@ const courseGroups = computed(() => {
     ...group,
     sections: Array.from(group.sections.values()),
     totalClassmates: Array.from(group.sections.values()).reduce(
-      (sum, section) => sum + section.students.length,
+      (sum, section: any) => sum + section.students.filter((s: any) => !s.isMe).length,
       0
     )
   }))
@@ -586,9 +593,100 @@ const getClassesForDay = (dayKey: string) => {
   return myCalendarClasses.value.filter(c => c.day === dayKey)
 }
 
-// Parse time string - handles both "9:00 AM" and "14:30" formats
+// Format time string - handles ISO timestamps and various formats
+const formatTime = (timeStr: string): string => {
+  if (!timeStr) return ''
+  
+  // Handle ISO timestamp format (e.g., "2025-08-31T14:00:00.000Z")
+  if (timeStr.includes('T') && timeStr.includes('Z')) {
+    try {
+      const date = new Date(timeStr)
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      return `${hours}:${minutes}`
+    } catch (e) {
+      // Fall through to other formats
+    }
+  }
+  
+  // Handle ISO timestamp without Z (e.g., "2025-08-31T14:00:00.000")
+  if (timeStr.includes('T')) {
+    try {
+      const timePart = timeStr.split('T')[1]
+      if (timePart) {
+        const timeMatch = timePart.match(/(\d{2}):(\d{2})/)
+        if (timeMatch) {
+          return `${timeMatch[1]}:${timeMatch[2]}`
+        }
+      }
+    } catch (e) {
+      // Fall through to other formats
+    }
+  }
+  
+  // Already formatted as "HH:MM" or "H:MM"
+  const match24hr = timeStr.match(/(\d{1,2}):(\d{2})/)
+  if (match24hr) {
+    return timeStr // Return as-is if already in correct format
+  }
+  
+  // Try 12-hour format (e.g., "9:00 AM") - convert to 24-hour
+  const match12hr = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
+  if (match12hr) {
+    let hour = parseInt(match12hr[1])
+    const minutes = parseInt(match12hr[2])
+    const period = match12hr[3].toUpperCase()
+    
+    if (period === 'PM' && hour !== 12) {
+      hour += 12
+    } else if (period === 'AM' && hour === 12) {
+      hour = 0
+    }
+    
+    return `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+  }
+  
+  return timeStr // Return original if no format recognized
+}
+
+// Format days array - convert full names to abbreviations
+const formatDays = (days: string[]): string => {
+  if (!days || days.length === 0) return ''
+  
+  const dayMap: { [key: string]: string } = {
+    'Monday': 'M',
+    'Tuesday': 'T',
+    'Wednesday': 'W',
+    'Thursday': 'Th',
+    'Friday': 'F',
+    'Saturday': 'Sa',
+    'Sunday': 'Su'
+  }
+  
+  return days.map(day => {
+    // Check if it's already an abbreviation (M, T, W, etc.)
+    if (day.length <= 2) return day
+    
+    // Map full name to abbreviation
+    return dayMap[day] || day
+  }).join(', ')
+}
+
+// Parse time string - handles ISO timestamps, "9:00 AM", and "14:30" formats
 const parseTime = (timeStr: string): number => {
   if (!timeStr) return 0
+  
+  // Handle ISO timestamp format (e.g., "2025-08-31T14:00:00.000Z")
+  if (timeStr.includes('T')) {
+    try {
+      const date = new Date(timeStr)
+      if (!isNaN(date.getTime())) {
+        return date.getHours() + date.getMinutes() / 60
+      }
+    } catch (e) {
+      // Fall through to other formats
+    }
+  }
   
   // Try 12-hour format first (e.g., "9:00 AM")
   const match12hr = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
@@ -771,7 +869,7 @@ onMounted(() => {
   width: 48px;
   height: 48px;
   border: 4px solid #e7e5e4;
-  border-top: 4px solid #1e3a8a;
+  border-top: 4px solid #2E7D32;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -782,7 +880,7 @@ onMounted(() => {
 }
 
 .loading-container p {
-  color: #78716c;
+  color: #0F172A;
   font-size: 1rem;
 }
 
@@ -792,21 +890,21 @@ onMounted(() => {
 }
 
 .error-container h2 {
-  font-family: 'Sora', sans-serif;
-  color: #7c2d12;
+  font-family: 'DM Serif Display', Georgia, serif;
+  color: #2E7D32;
   font-size: 2rem;
   margin: 0 0 1rem 0;
 }
 
 .error-container p {
-  color: #78716c;
+  color: #0F172A;
   margin-bottom: 2rem;
 }
 
 .back-btn {
   display: inline-block;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  background: #0D9488;
   color: white;
   text-decoration: none;
   border-radius: 8px;
@@ -836,7 +934,7 @@ onMounted(() => {
   border-radius: 16px;
   padding: 2rem;
   margin-bottom: 2rem;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   position: relative;
 }
@@ -848,14 +946,14 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #7c2d12 0%, #1e3a8a 50%, #d97706 100%);
+  background: linear-gradient(90deg, #2E7D32 0%, #0D9488 100%);
   border-radius: 16px 16px 0 0;
 }
 
 .back-link {
   display: inline-flex;
   align-items: center;
-  color: #78716c;
+  color: #0F172A;
   text-decoration: none;
   font-weight: 500;
   margin-bottom: 1.5rem;
@@ -863,7 +961,7 @@ onMounted(() => {
 }
 
 .back-link:hover {
-  color: #7c2d12;
+  color: #2E7D32;
   transform: translateX(-4px);
 }
 
@@ -873,17 +971,17 @@ onMounted(() => {
 }
 
 .schedule-title {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 2rem;
   font-weight: 800;
-  color: #7c2d12;
+  color: #2E7D32;
   margin: 0 0 0.5rem 0;
   letter-spacing: -0.5px;
 }
 
 .schedule-subtitle {
   font-size: 1.125rem;
-  color: #78716c;
+  color: #0F172A;
   margin: 0;
 }
 
@@ -896,24 +994,24 @@ onMounted(() => {
 .toggle-btn {
   padding: 0.625rem 1.25rem;
   background: white;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #78716c;
+  color: #0F172A;
 }
 
 .toggle-btn:hover {
-  border-color: #7c2d12;
-  background: #fef3c7;
+  border-color: #2E7D32;
+  background: #E8F5E9;
   color: #1c1917;
 }
 
 .toggle-btn.active {
-  background: #7c2d12;
+  background: #2E7D32;
   color: white;
-  border-color: #7c2d12;
+  border-color: #2E7D32;
   box-shadow: 0 2px 4px rgba(124, 45, 18, 0.2);
 }
 
@@ -928,7 +1026,7 @@ onMounted(() => {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
   padding: 0.5rem;
   border-radius: 12px;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
 }
 
 .nav-tab {
@@ -944,18 +1042,18 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #78716c;
+  color: #0F172A;
   font-size: 1rem;
   font-family: inherit;
 }
 
 .nav-tab:hover {
-  background: #fef3c7;
+  background: #E8F5E9;
   color: #1c1917;
 }
 
 .nav-tab.active {
-  background: #7c2d12;
+  background: #2E7D32;
   color: white;
   box-shadow: 0 2px 8px rgba(124, 45, 18, 0.3);
 }
@@ -967,7 +1065,7 @@ onMounted(() => {
 /* Filters */
 .filters-section {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -991,7 +1089,7 @@ onMounted(() => {
 
 .filter-select {
   padding: 0.5rem 1rem;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 6px;
   background: #fafaf9;
   font-size: 0.875rem;
@@ -1001,7 +1099,7 @@ onMounted(() => {
 
 .filter-select:focus {
   outline: none;
-  border-color: #7c2d12;
+  border-color: #2E7D32;
   box-shadow: 0 0 0 3px rgba(124, 45, 18, 0.1);
 }
 
@@ -1016,14 +1114,14 @@ onMounted(() => {
 }
 
 .checkbox-filter:hover {
-  background: #fef3c7;
+  background: #E8F5E9;
 }
 
 .checkbox-filter input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #7c2d12;
+  accent-color: #2E7D32;
 }
 
 .checkbox-filter span {
@@ -1040,7 +1138,7 @@ onMounted(() => {
 .search-input {
   width: 100%;
   padding: 0.5rem 1rem;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 6px;
   background: #fafaf9;
   font-size: 0.875rem;
@@ -1049,7 +1147,7 @@ onMounted(() => {
 
 .search-input:focus {
   outline: none;
-  border-color: #7c2d12;
+  border-color: #2E7D32;
   background: white;
   box-shadow: 0 0 0 3px rgba(124, 45, 18, 0.1);
 }
@@ -1064,7 +1162,7 @@ onMounted(() => {
 
 .stat-item {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
@@ -1075,7 +1173,7 @@ onMounted(() => {
   font-family: 'Space Mono', monospace;
   font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #7c2d12 0%, #92400e 100%);
+  background: #2E7D32;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1085,7 +1183,7 @@ onMounted(() => {
 .stat-label {
   display: block;
   font-size: 0.8125rem;
-  color: #78716c;
+  color: #0F172A;
   text-transform: uppercase;
   letter-spacing: 1px;
   font-weight: 600;
@@ -1100,7 +1198,7 @@ onMounted(() => {
 
 .course-group {
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 16px;
   padding: 1.5rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1115,7 +1213,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #7c2d12 0%, #1e3a8a 50%, #d97706 100%);
+  background: linear-gradient(90deg, #2E7D32 0%, #0D9488 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -1125,7 +1223,7 @@ onMounted(() => {
 }
 
 .course-group.my-course {
-  border-color: #7c2d12;
+  border-color: #2E7D32;
   box-shadow: 0 4px 12px rgba(124, 45, 18, 0.15);
 }
 
@@ -1151,7 +1249,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 1.75rem;
-  border: 2px solid #fef3c7;
+  border: 2px solid #E8F5E9;
   flex-shrink: 0;
 }
 
@@ -1160,10 +1258,10 @@ onMounted(() => {
 }
 
 .course-name {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.375rem;
   font-weight: 700;
-  color: #7c2d12;
+  color: #2E7D32;
   margin: 0 0 0.5rem 0;
   line-height: 1.3;
   display: flex;
@@ -1176,26 +1274,26 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  background: #dbeafe;
-  color: #1e3a8a;
+  background: #CCFBF1;
+  color: #0A7C72;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border: 1px solid #93c5fd;
+  border: 1px solid #99F6E4;
 }
 
 .course-meta {
-  color: #78716c;
+  color: #0F172A;
   font-size: 0.9375rem;
   margin: 0;
 }
 
 .classmate-count {
   padding: 0.5rem 1rem;
-  background: #fef3c7;
-  color: #92400e;
+  background: #E8F5E9;
+  color: #0A7C72;
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 600;
@@ -1212,14 +1310,14 @@ onMounted(() => {
 
 .section-item {
   background: #fafaf9;
-  border: 1px solid #e7e5e4;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 1rem;
 }
 
 .section-item.my-section {
-  background: #dbeafe;
-  border-color: #93c5fd;
+  background: #CCFBF1;
+  border-color: #99F6E4;
 }
 
 .section-header {
@@ -1240,7 +1338,7 @@ onMounted(() => {
 
 .section-type {
   padding: 0.25rem 0.625rem;
-  background: #7c2d12;
+  background: #2E7D32;
   color: white;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -1258,7 +1356,7 @@ onMounted(() => {
 
 .section-badge {
   padding: 0.25rem 0.625rem;
-  background: #1e3a8a;
+  background: #0D9488;
   color: white;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -1281,21 +1379,21 @@ onMounted(() => {
   gap: 0.5rem;
   padding: 0.5rem 0.875rem;
   background: white;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .student-chip:hover {
-  border-color: #7c2d12;
+  border-color: #2E7D32;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(124, 45, 18, 0.1);
 }
 
 .student-chip.is-me {
-  background: #1e3a8a;
+  background: #0D9488;
   color: white;
-  border-color: #1e3a8a;
+  border-color: #0D9488;
   font-weight: 600;
 }
 
@@ -1307,7 +1405,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -1321,8 +1419,8 @@ onMounted(() => {
 .student-avatar .avatar-initials {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #92400e;
-  font-family: 'Sora', sans-serif;
+  color: #0A7C72;
+  font-family: 'DM Serif Display', Georgia, serif;
 }
 
 .student-name {
@@ -1336,7 +1434,7 @@ onMounted(() => {
   padding: 4rem 2rem;
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
   border-radius: 16px;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
 }
 
 .empty-icon {
@@ -1351,23 +1449,23 @@ onMounted(() => {
 }
 
 .empty-state h2 {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 2rem;
   font-weight: 700;
-  color: #7c2d12;
+  color: #2E7D32;
   margin: 0 0 1rem 0;
 }
 
 .empty-state p {
   font-size: 1.125rem;
-  color: #78716c;
+  color: #0F172A;
   margin: 0 0 1.5rem 0;
 }
 
 .add-courses-btn {
   display: inline-block;
   padding: 0.875rem 2rem;
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  background: #0D9488;
   color: white;
   text-decoration: none;
   border-radius: 12px;
@@ -1390,7 +1488,7 @@ onMounted(() => {
 
 .calendar-container {
   background: white;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 16px;
   padding: 1.5rem;
   overflow-x: auto;
@@ -1424,7 +1522,7 @@ onMounted(() => {
   padding-top: 0.25rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #78716c;
+  color: #0F172A;
   border-bottom: 1px solid #f5f5f4;
 }
 
@@ -1450,7 +1548,7 @@ onMounted(() => {
 }
 
 .day-name {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-weight: 700;
   font-size: 1rem;
   color: #1c1917;
@@ -1458,7 +1556,7 @@ onMounted(() => {
 
 .day-abbr {
   font-size: 0.75rem;
-  color: #78716c;
+  color: #0F172A;
   font-weight: 500;
 }
 
@@ -1478,7 +1576,7 @@ onMounted(() => {
   left: 4px;
   right: 4px;
   background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
-  border: 2px solid #f59e0b;
+  border: 2px solid #F59E0B;
   border-radius: 8px;
   padding: 0.5rem;
   cursor: pointer;
@@ -1491,9 +1589,9 @@ onMounted(() => {
 /* Remove debug banner */
 
 .calendar-class.has-classmates {
-  background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
-  border-color: #7c2d12;
-  box-shadow: 0 4px 12px rgba(124, 45, 18, 0.3);
+  background: linear-gradient(135deg, #2E7D32 0%, #256528 100%);
+  border-color: #2E7D32;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
 }
 
 .calendar-class:hover {
@@ -1509,12 +1607,12 @@ onMounted(() => {
 .calendar-class.selected {
   z-index: 30;
   transform: scale(1.05);
-  box-shadow: 0 0 0 4px #1e3a8a, 0 8px 24px rgba(30, 58, 138, 0.4) !important;
+  box-shadow: 0 0 0 4px #0D9488, 0 8px 24px rgba(13, 148, 136, 0.4) !important;
   animation: pulse-selection 0.5s ease;
 }
 
 .calendar-class.has-classmates.selected {
-  box-shadow: 0 0 0 4px #7c2d12, 0 8px 24px rgba(124, 45, 18, 0.4) !important;
+  box-shadow: 0 0 0 4px #2E7D32, 0 8px 24px rgba(46, 125, 50, 0.4) !important;
 }
 
 @keyframes pulse-selection {
@@ -1540,7 +1638,7 @@ onMounted(() => {
 }
 
 .class-code {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 0.8125rem;
   font-weight: 700;
 }
@@ -1583,7 +1681,7 @@ onMounted(() => {
 
 .class-modal {
   background: white;
-  border: 3px solid #1e3a8a;
+  border: 3px solid #0D9488;
   border-radius: 16px;
   padding: 0;
   min-width: 400px;
@@ -1611,13 +1709,13 @@ onMounted(() => {
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  background: linear-gradient(145deg, #1e3a8a 0%, #1e40af 100%);
+  background: linear-gradient(145deg, #0D9488 0%, #0A7C72 100%);
   color: white;
   border-radius: 13px 13px 0 0;
 }
 
 .modal-header strong {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.25rem;
   font-weight: 700;
   flex: 1;
@@ -1663,7 +1761,7 @@ onMounted(() => {
   font-weight: 700;
   color: #1c1917;
   margin-bottom: 0.375rem;
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1686,7 +1784,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.5rem;
-  background: #fef3c7;
+  background: #E8F5E9;
   border-radius: 6px;
 }
 
@@ -1698,7 +1796,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -1712,8 +1810,8 @@ onMounted(() => {
 .avatar-initials-small {
   font-size: 0.625rem;
   font-weight: 700;
-  color: #92400e;
-  font-family: 'Sora', sans-serif;
+  color: #0A7C72;
+  font-family: 'DM Serif Display', Georgia, serif;
 }
 
 .classmate-name-small {
@@ -1723,7 +1821,7 @@ onMounted(() => {
 }
 
 .no-classmates-note {
-  color: #78716c;
+  color: #0F172A;
   font-style: italic;
   font-size: 0.8125rem;
   padding: 1rem;
@@ -1737,7 +1835,7 @@ onMounted(() => {
   text-align: center;
   padding: 4rem 2rem;
   background: linear-gradient(145deg, #ffffff 0%, #fefdfb 100%);
-  border: 2px solid #e7e5e4;
+  border: 2px solid #E5E7EB;
   border-radius: 16px;
 }
 
@@ -1747,23 +1845,23 @@ onMounted(() => {
 }
 
 .empty-calendar h3 {
-  font-family: 'Sora', sans-serif;
+  font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #7c2d12;
+  color: #2E7D32;
   margin: 0 0 0.5rem 0;
 }
 
 .empty-calendar p {
   font-size: 1rem;
-  color: #78716c;
+  color: #0F172A;
   margin: 0 0 1.5rem 0;
 }
 
 .add-classes-btn {
   display: inline-block;
   padding: 0.875rem 2rem;
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  background: #0D9488;
   color: white;
   text-decoration: none;
   border-radius: 12px;
