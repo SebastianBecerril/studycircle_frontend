@@ -168,7 +168,6 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getTerms()
-      console.log('Fetch terms response:', response)
       setTerms(response || [])
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to fetch terms')
@@ -180,7 +179,6 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getCoursesByTerm(termId)
-      console.log('Fetch courses response:', response)
       const fetchedCourses = response || []
       
       // Add courses that aren't already in the store
@@ -199,7 +197,6 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getSectionsByCourse(courseId)
-      console.log('Fetch sections response:', response)
       const fetchedSections = response || []
       
       // Add sections that aren't already in the store
@@ -218,7 +215,6 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getCourseById(courseId)
-      console.log('Fetch course by ID response:', response)
       
       // The API might return { course: courseObject } or just the course object
       const course = response.course || response
@@ -243,7 +239,6 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     setError(null)
     try {
       const response = await studyCircleApi.createOrGetTerm(name)
-      console.log('CreateOrGet term response:', response)
       const termId = response.term
       
       if (!termId) {
@@ -272,7 +267,6 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     setError(null)
     try {
       const response = await studyCircleApi.createOrGetCourse(termId, courseNumber, courseName, department)
-      console.log('CreateOrGet course response:', response)
       const courseId = response.course
       
       if (!courseId) {
@@ -318,7 +312,6 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
         location,
         instructor
       )
-      console.log('CreateOrGet section response:', response)
       const sectionId = response.section
       
       if (!sectionId) {

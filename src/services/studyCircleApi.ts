@@ -37,23 +37,6 @@ api.interceptors.response.use(
   }
 )
 
-// TODO: Replace these interfaces with your actual API response types
-// based on your 6 API specifications
-
-export interface User {
-  id: number
-  name: string
-  email: string
-  // Add other user fields based on your API spec
-}
-
-// TODO: Add interfaces for your other entities based on your API specs
-// Example:
-// export interface StudyGroup { ... }
-// export interface StudySession { ... }
-// export interface Assignment { ... }
-// etc.
-
 export const studyCircleApi = {
   // UserAuthentication APIs
   async register(username: string, password: string) {

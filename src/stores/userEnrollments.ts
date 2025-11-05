@@ -99,7 +99,6 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getEnrollmentsByOwner(userId)
-      console.log('Fetch enrollments response:', response)
       setEnrollments(response || [])
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to fetch enrollments')
@@ -114,7 +113,6 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getEnrollmentsByOwner(userId)
-      console.log('Fetch and merge enrollments response for user', userId, ':', response)
       
       // Merge new enrollments, avoiding duplicates
       const newEnrollments = response || []
@@ -140,7 +138,6 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     setError(null)
     try {
       const response = await studyCircleApi.addEnrollment(owner, course, section, visibility)
-      console.log('Create enrollment response:', response)
       
       const enrollmentId = response.enrollment
       
@@ -171,7 +168,6 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     setError(null)
     try {
       await studyCircleApi.removeEnrollment(enrollmentId)
-      console.log('Enrollment deleted successfully')
       removeEnrollment(enrollmentId)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to delete enrollment')
@@ -186,7 +182,6 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     setError(null)
     try {
       await studyCircleApi.setEnrollmentVisibility(enrollmentId, newVisibility)
-      console.log('Enrollment visibility updated')
       updateEnrollmentVisibility(enrollmentId, newVisibility)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to update visibility')
@@ -199,7 +194,6 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     setError(null)
     try {
       await studyCircleApi.updateCourseSection(enrollmentId, newSectionId)
-      console.log('Enrollment section updated')
       updateEnrollmentSection(enrollmentId, newSectionId)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to update section')

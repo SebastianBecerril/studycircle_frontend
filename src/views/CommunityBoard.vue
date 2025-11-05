@@ -878,8 +878,6 @@ const handleCreateReply = async (postId: string) => {
       return
     }
 
-    console.log('Creating reply:', { postId, body: replyBody })
-
     submittingReply.value.add(postId)
 
     await communityBoard.createReply(postId, auth.userId, replyBody)
@@ -889,8 +887,6 @@ const handleCreateReply = async (postId: string) => {
       await profileHelper.fetchProfilesForUsers([auth.userId])
     }
 
-    console.log('Reply created successfully')
-    
     // Clear form and close
     replyForms.value[postId] = ''
     replyingTo.value.delete(postId)
@@ -947,14 +943,10 @@ const handleUpdatePost = async (postId: string) => {
       .map((tag: string) => tag.trim())
       .filter((tag: string) => tag.length > 0)
 
-    console.log('Updating post:', { postId, title, body, tags })
-
     savingPost.value.add(postId)
 
     await communityBoard.updatePostAction(postId, title, body, tags, '', auth.userId)
 
-    console.log('Post updated successfully')
-    
     // Close edit form
     editingPost.value.delete(postId)
     delete editPostForms.value[postId]
@@ -996,14 +988,10 @@ const handleUpdateReply = async (replyId: string) => {
       return
     }
 
-    console.log('Updating reply:', { replyId, body })
-
     savingReply.value.add(replyId)
 
     await communityBoard.updateReplyAction(replyId, body, auth.userId)
 
-    console.log('Reply updated successfully')
-    
     // Close edit form
     editingReply.value.delete(replyId)
     delete editReplyForms.value[replyId]
@@ -1049,14 +1037,6 @@ const handleCreatePost = async () => {
       return
     }
 
-    console.log('Creating post with data:', {
-      title: createPostForm.value.title.trim(),
-      body: createPostForm.value.body.trim(),
-      tags: tagsInput.value,
-      communityId: communityId.value,
-      userId: auth.userId
-    })
-
     // Parse tags from comma-separated string
     const tags = tagsInput.value
       .split(',')
@@ -1072,7 +1052,6 @@ const handleCreatePost = async () => {
       '' // course is optional, empty for now
     )
 
-    console.log('Post created successfully')
     closeCreatePostForm()
   } catch (error: any) {
     console.error('Failed to create post:', error)
@@ -1112,12 +1091,8 @@ const handleAddMember = async () => {
       throw new Error('Please enter a user ID')
     }
 
-    console.log('Adding member:', userId, 'to community:', communityId.value)
-
     // Add member to community
     await community.joinCommunity(communityId.value, userId)
-
-    console.log('Member added successfully')
     
     // Refetch memberships to update the list
     await community.fetchMemberships()
@@ -1147,11 +1122,7 @@ const handleLeaveCommunity = async () => {
       throw new Error('You must be logged in to leave a community')
     }
 
-    console.log('Leaving community:', communityId.value)
-
     await community.leaveCommunity(communityId.value, auth.userId)
-
-    console.log('Successfully left community')
     
     // Redirect to communities page
     router.push('/community')
@@ -1197,11 +1168,7 @@ const handleDeletePost = async () => {
       throw new Error('You must be logged in to delete posts')
     }
 
-    console.log('Deleting post:', postToDelete.value._id)
-
     await communityBoard.deletePostAction(postToDelete.value._id, auth.userId)
-
-    console.log('Post deleted successfully')
     cancelDeletePost()
   } catch (error: any) {
     console.error('Failed to delete post:', error)
@@ -1234,11 +1201,7 @@ const handleDeleteReply = async () => {
       throw new Error('You must be logged in to delete replies')
     }
 
-    console.log('Deleting reply:', replyToDelete.value._id)
-
     await communityBoard.deleteReplyAction(replyToDelete.value._id, auth.userId)
-
-    console.log('Reply deleted successfully')
     cancelDeleteReply()
   } catch (error: any) {
     console.error('Failed to delete reply:', error)
@@ -1345,7 +1308,8 @@ onMounted(async () => {
 
 .back-btn,
 .back-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 0.75rem 1.5rem;
   background: #0D9488;
   color: white;
@@ -1353,12 +1317,14 @@ onMounted(async () => {
   border-radius: 8px;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
 }
 
-.back-btn:hover {
+.back-btn:hover,
+.back-link:hover {
+  background: #0A7C72;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.4);
 }
 
 /* Board Content */
@@ -1398,20 +1364,6 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  color: #0F172A;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.back-link:hover {
-  color: #2E7D32;
-  transform: translateX(-4px);
 }
 
 .leave-community-btn {

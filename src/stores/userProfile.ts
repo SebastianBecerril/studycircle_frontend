@@ -76,7 +76,6 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getProfileByUser(userId)
-      console.log('Fetch profile response:', response)
       
       // API might return { profile: profileObject } or just the profile
       const profile = response.profile || response
@@ -98,7 +97,6 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     } catch (err: any) {
       // 404 or no profile is not an error state - user just needs to create one
       if (err.response?.status === 404 || err.response?.data?.error?.includes('not found')) {
-        console.log('No profile found for user:', userId)
         setCurrentProfile(null)
         return null
       }
@@ -116,7 +114,6 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     setError(null)
     try {
       const response = await studyCircleApi.createProfile(userId, displayName)
-      console.log('Create profile response:', response)
       
       const profileId = response.profile
       
@@ -150,7 +147,6 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     setError(null)
     try {
       await studyCircleApi.updateDisplayName(profileId, newDisplayName)
-      console.log('Display name updated')
       
       // Update in store
       updateProfile(profileId, { displayName: newDisplayName })
@@ -165,7 +161,6 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     setError(null)
     try {
       await studyCircleApi.updateBio(profileId, newBio)
-      console.log('Bio updated')
       
       // Update in store
       updateProfile(profileId, { bio: newBio })
@@ -180,7 +175,6 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     setError(null)
     try {
       await studyCircleApi.updateThumbnailImage(profileId, newThumbnailImageURL)
-      console.log('Thumbnail updated')
       
       // Update in store
       updateProfile(profileId, { thumbnailImageURL: newThumbnailImageURL })

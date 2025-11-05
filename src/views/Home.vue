@@ -12,8 +12,35 @@
             Browse Communities
           </router-link>
           <router-link to="/courses" class="btn btn-secondary">
-            Add Your Classes
+            Add Your Courses
           </router-link>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="features-section">
+      <h2 class="section-title">How It Works</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📚</div>
+          <h3 class="feature-title">Add Your Courses</h3>
+          <p class="feature-description">Enter your course schedule and sections to find classmates in your same classes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">👥</div>
+          <h3 class="feature-title">Join Communities</h3>
+          <p class="feature-description">Create or join study communities with your friends, clubs, or organizations.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📅</div>
+          <h3 class="feature-title">Share Schedules</h3>
+          <p class="feature-description">View shared schedules to see who's in your classes and coordinate study sessions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3 class="feature-title">Connect & Study</h3>
+          <p class="feature-description">Post on community boards, find study partners, and build your study groups.</p>
         </div>
       </div>
     </section>
@@ -53,76 +80,15 @@
       </div>
     </section>
 
-    <!-- API Status (Developer Tools) -->
-    <section class="dev-section">
-      <details class="dev-tools">
-        <summary class="dev-tools-header">Developer Tools</summary>
-        <div class="dev-tools-content">
-          <div class="api-status">
-            <h3>API Connection</h3>
-            <p class="api-url">Backend: <code>{{ apiBaseUrl }}</code></p>
-            <button @click="testConnection" :disabled="testing" class="btn btn-test">
-              {{ testing ? 'Testing...' : 'Test Connection' }}
-            </button>
-            <div v-if="connectionStatus" class="status-message" :class="connectionStatus.includes('✅') ? 'success' : 'error'">
-              {{ connectionStatus }}
-            </div>
-          </div>
-          
-          <div class="store-status">
-            <h3>Store Status</h3>
-            <div class="store-grid">
-              <div class="store-item">
-                <span class="store-label">Auth:</span>
-                <span :class="auth.isLoggedIn ? 'badge-success' : 'badge-inactive'">
-                  {{ auth.isLoggedIn ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
-              <div class="store-item">
-                <span class="store-label">Profile:</span>
-                <span :class="userProfile.hasProfile ? 'badge-success' : 'badge-inactive'">
-                  {{ userProfile.hasProfile ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </details>
-    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useStores } from '@/composables/useStores'
-import { studyCircleApi } from '@/services/studyCircleApi'
-
-const apiBaseUrl = 'http://localhost:8000/'
-const testing = ref(false)
-const connectionStatus = ref('')
 
 // Access Pinia stores
-const { auth, userProfile, community, communityBoard, courseCatalog, userEnrollments } = useStores()
-
-const testConnection = async () => {
-  testing.value = true
-  connectionStatus.value = 'Testing API connection...'
-  
-  try {
-    // Test using the corrected API service
-    await studyCircleApi.getTerms()
-    connectionStatus.value = '✅ API connection successful!'
-  } catch (error: any) {
-    console.error('API Error Details:', error)
-    if (error.response) {
-      connectionStatus.value = `❌ Backend responded with error: ${error.response.status} - ${error.response.data?.error || error.message}`
-    } else {
-      connectionStatus.value = `❌ API connection failed: ${error.message}`
-    }
-  } finally {
-    testing.value = false
-  }
-}
+const { auth, community, communityBoard, courseCatalog, userEnrollments } = useStores()
 
 // Initialize stores on component mount
 onMounted(() => {
@@ -256,17 +222,6 @@ onMounted(() => {
   box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
 }
 
-.btn-test {
-  background-color: #1F2937;
-  color: #F8FAFC;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.875rem; /* 14px - Small */
-}
-
-.btn-test:hover:not(:disabled) {
-  background-color: #0F172A;
-  transform: translateY(-1px);
-}
 
 .btn:disabled {
   opacity: 0.5;
@@ -427,160 +382,77 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* Developer Tools Section */
-.dev-section {
-  padding: 0 2rem 3rem;
+/* Features Section */
+.features-section {
+  padding: 4rem 2rem;
+  background: #FFFFFF;
+  position: relative;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
   max-width: 1100px;
   margin: 0 auto;
 }
 
-.dev-tools {
-  background: #FFFFFF;
+.feature-card {
+  background: #FAFAF9;
   border: 1px solid #E5E7EB;
   border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.dev-tools-header {
-  padding: 1rem 1.5rem;
-  font-weight: 600;
-  color: #0F172A;
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.875rem; /* 14px - Small */
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: background-color 0.2s;
-  font-family: 'Inter', sans-serif;
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2E7D32 0%, #0D9488 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.dev-tools-header:hover {
-  background-color: #F8FAFC;
+.feature-card:hover::before {
+  opacity: 1;
 }
 
-.dev-tools-content {
-  padding: 1.5rem;
-  border-top: 1px solid #E5E7EB;
+.feature-card:hover {
+  border-color: #2E7D32;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(46, 125, 50, 0.12), 0 0 0 1px rgba(46, 125, 50, 0.06);
+  background: #FFFFFF;
 }
 
-.api-status {
-  background: #F8FAFC;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+.feature-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
 }
 
-.api-status h3 {
+.feature-title {
   font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.375rem; /* 22px - H3 */
   font-weight: 400;
+  color: #2E7D32;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.3;
+}
+
+.feature-description {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9375rem;
   color: #0F172A;
-  margin: 0 0 1rem 0;
-  line-height: 1.4;
-}
-
-.api-url {
-  color: #0F172A;
-  font-size: 0.875rem; /* 14px - Small */
-  margin: 0 0 1rem 0;
-  font-family: 'Inter', sans-serif;
-}
-
-.api-url code {
-  background: #E8F5E9;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-family: 'Space Mono', monospace;
-  color: #256528;
-  font-size: 0.8125rem; /* 13px - Code/Meta */
-  border: 1px solid #C8E6C9;
-}
-
-.status-message {
-  margin-top: 1rem;
-  padding: 0.875rem 1rem;
-  border-radius: 6px;
-  font-size: 0.875rem; /* 14px - Small */
-  font-weight: 500;
-  border-left: 3px solid;
-  font-family: 'Inter', sans-serif;
-  line-height: 1.45;
-}
-
-.status-message.success {
-  background-color: #DCFCE7;
-  color: #166534;
-  border-left-color: #22C55E;
-}
-
-.status-message.error {
-  background-color: #FEE2E2;
-  color: #991B1B;
-  border-left-color: #EF4444;
-}
-
-.store-status {
-  background: #F8FAFC;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  padding: 1.5rem;
-}
-
-.store-status h3 {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.375rem; /* 22px - H3 */
-  font-weight: 400;
-  color: #0F172A;
-  margin: 0 0 1rem 0;
-  line-height: 1.4;
-}
-
-.store-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-}
-
-.store-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.store-label {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.875rem; /* 14px - Small */
-  color: #0F172A;
-  font-weight: 500;
-}
-
-.badge-success {
-  background-color: #DCFCE7;
-  color: #166534;
-  padding: 0.25rem 0.625rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid #22C55E;
-  font-family: 'Inter', sans-serif;
-}
-
-.badge-inactive {
-  background-color: #F8FAFC;
-  color: #64748B;
-  padding: 0.25rem 0.625rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid #E5E7EB;
-  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  opacity: 0.85;
 }
 
 /* Responsive Design */
@@ -614,12 +486,13 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .dev-section {
-    padding: 0 1rem 2rem;
+  .features-section {
+    padding: 3rem 1rem;
   }
 
-  .store-grid {
+  .features-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 }
 </style>

@@ -3,7 +3,7 @@
     <!-- Header Section -->
     <div class="page-header">
       <div class="header-content">
-        <h1>My Classes</h1>
+        <h1>My Courses</h1>
         <p>Manage your course enrollments and connect with classmates</p>
       </div>
       <button @click="showAddForm = true" class="add-course-btn">
@@ -415,7 +415,6 @@ const fetchData = async () => {
       if (!course) {
         // Course not in store, fetch it
         try {
-          console.log('Fetching course details for:', courseId)
           await courseCatalog.fetchCourseById(courseId)
           course = courseCatalog.courses.find(c => c._id === courseId)
         } catch (err) {
@@ -473,8 +472,6 @@ const handleAddCourse = async () => {
       return
     }
 
-    console.log('Adding course with data:', addForm.value, 'using term:', termName)
-
     // Step 1: Create or get term
     const termId = await courseCatalog.createOrGetTermAction(termName)
 
@@ -505,7 +502,6 @@ const handleAddCourse = async () => {
       addForm.value.visibility
     )
 
-    console.log('Course added successfully')
     closeAddForm()
     
     // Refresh the list
@@ -554,7 +550,6 @@ const handleDelete = async () => {
   try {
     deleteError.value = ''
     await userEnrollments.deleteEnrollment(enrollmentToDelete.value._id)
-    console.log('Enrollment deleted successfully')
     cancelDelete()
   } catch (error: any) {
     console.error('Failed to delete enrollment:', error)
@@ -565,7 +560,6 @@ const handleDelete = async () => {
 const toggleVisibility = async (enrollmentId: string, newVisibility: boolean) => {
   try {
     await userEnrollments.toggleEnrollmentVisibility(enrollmentId, newVisibility)
-    console.log('Visibility toggled successfully')
   } catch (error: any) {
     console.error('Failed to toggle visibility:', error)
     // Optionally show an error notification

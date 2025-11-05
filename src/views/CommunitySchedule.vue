@@ -788,9 +788,7 @@ const fetchData = async () => {
     }
 
     // 4. Fetch enrollments for all community members
-    // TODO: Backend needs endpoint: GET /api/enrollments/community/:communityId
-    // This should return all VISIBLE enrollments for all members of the community
-    // For now, we fetch enrollments for each member individually
+    // Fetch enrollments for each member individually
     
     if (communityMemberIds.value.length > 0) {
       // Clear existing enrollments first to avoid stale data
@@ -805,7 +803,6 @@ const fetchData = async () => {
       // Wait for all fetches to complete
       await Promise.all(fetchPromises)
       
-      console.log('Loaded enrollments for', communityMemberIds.value.length, 'community members')
     }
     
     // 5. Fetch all terms for course details
@@ -819,7 +816,6 @@ const fetchData = async () => {
       if (!course) {
         // Course not in store, fetch it
         try {
-          console.log('Fetching course details for:', courseId)
           await courseCatalog.fetchCourseById(courseId)
           course = courseCatalog.courses.find(c => c._id === courseId)
         } catch (err) {

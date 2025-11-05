@@ -130,7 +130,6 @@ export const useCommunityStore = defineStore('community', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getAllCommunities()
-      console.log('Fetch communities response:', response)
       // The API returns an array of communities directly
       setCommunities(response || [])
     } catch (err: any) {
@@ -145,7 +144,6 @@ export const useCommunityStore = defineStore('community', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getAllMemberships()
-      console.log('Fetch memberships response:', response)
       // The API returns an array of memberships directly
       setMemberships(response || [])
     } catch (err: any) {
@@ -159,14 +157,12 @@ export const useCommunityStore = defineStore('community', () => {
     setError(null)
     try {
       const response = await studyCircleApi.createCommunity(communityData.name, communityData.description, creatorId)
-      console.log('Create community response:', response)
       
       // The API returns { community: "string (ID)" }, so we need to fetch the full community data
       if (response.community) {
         try {
           // Fetch the full community data
           const fullCommunity = await studyCircleApi.getCommunityById(response.community)
-          console.log('Full community data:', fullCommunity)
           
           // Check if the response has the expected structure
           if (fullCommunity && fullCommunity.community) {
@@ -214,7 +210,6 @@ export const useCommunityStore = defineStore('community', () => {
     setError(null)
     try {
       const response = await studyCircleApi.joinCommunity(communityId, userId)
-      console.log('Join community response:', response)
       
       // Create a membership object for the local state
       const membership: Membership = {
@@ -277,7 +272,6 @@ export const useCommunityStore = defineStore('community', () => {
     setError(null)
     try {
       await studyCircleApi.updateCommunityDetails(communityId, newName, newDescription, requesterId)
-      console.log('Community details updated successfully')
       
       // Update in store
       updateCommunity(communityId, {

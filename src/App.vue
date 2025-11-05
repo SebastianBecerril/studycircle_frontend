@@ -52,7 +52,6 @@
     </main>
     
     <footer>
-      <!-- TODO: Add footer content if needed -->
     </footer>
   </div>
 </template>

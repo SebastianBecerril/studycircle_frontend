@@ -1,91 +1,17 @@
 # StudyCircle Frontend
 
 ## User Journey
-A user is starting their college semester, and they want to figure out which of the people in their fraternity are taking the same classes as they are so they can set up a study group. The user opens our app on their laptop and signs up on StudyCircle by creating a profile. WIth their profile created, they now want to create a community for all their fraternity members to join. They go to the 'Communities' tab and click on 'Create Community'. They enter the community details, create, and join their community. (This up to the part I was able to do, I ran into many struggles with coding the frontend).
+A user is starting their college semester, and they want to figure out which of the people in their fraternity are taking the same classes as they are so they can set up a study group. The user opens our app on their laptop and sets their schedule by choosing the classes that they are taking this semester. They are able to enter their lecture/recitation/lab sections depending on the class, as well as choose the visibility of their schedule to their community. Once they have set up their schedule, they can go to the “Communities” tab to create their own or enter an already-existing community (once invited) with their fraternity members. After setting up their community, they now have access to their community board and shared schedule.
 
-After creating their community, their fraternity member shsould also be able to join. With that set up, the user can enter their classes, with their respective visiility settings, in order to share their schedule with their peers. Having this in place, the user can go to the 'Community Board' tab, and make a post looking for study buddies.
+After joining a community, the user can see which classes each community member is taking, as well as see in their schedule who they share a class section with, so they have an idea of how many people will react to their post if they choose to focus on a specific class. When they go to the "Shared Schedule calendar" tab, they can see their own schedule with their own classes in a calendar format, which they can then click to see which members of their community are taking. If they wish to have a more structured list ordered by classes, they can go to “List View” and see a list of classes as well as the members that are taking them. With this, they can take the route of creating a group chat directly with members in their community taking their class of interest.
+
+With all the setup complete, the user can now choose how they want to create a study group. Since they wish to send a general posting to their whole fraternity asking who wants to be in a study group, they will navigate to the "Board" tab within their community, where they can create and view postings by members. Once on that page, they click "Create Post,” where they can fill in the “Title” field, the "Message" field, and add a “Looking for Group” tag. With that complete, their posting is viewable by the whole community, and others can reply to the post in order to communicate with the user. Now the user can just wait for other members to reply in order to start their study group!
 
 
-## Video
+## User Journey Video
 
-[StudyCircle Frontend Demo](public/StudyCircle Frontend.mp4)
+[StudyCircle Frontend Demo](UserJourneyVideo.mov)
 
----
+## Visual Design Study
 
-## Features
-
-- ⚡️ **Vite** - Lightning fast build tool
-- 🎯 **Vue 3** - Progressive JavaScript framework
-- 🔷 **TypeScript** - Type-safe JavaScript
-- 🎨 **Modern CSS** - Clean and responsive design
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (version 16 or higher)
-- npm or yarn
-
-### Installation
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-### Development
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-The application will be available at `http://localhost:3000`
-
-### Build
-
-Build the application for production:
-
-```bash
-npm run build
-```
-
-### Preview
-
-Preview the production build:
-
-```bash
-npm run preview
-```
-
-### Type Checking
-
-Run TypeScript type checking:
-
-```bash
-npm run type-check
-```
-
-## Project Structure
-
-```
-src/
-├── components/          # Vue components
-│   └── HelloWorld.vue
-├── App.vue             # Main application component
-├── main.ts             # Application entry point
-└── style.css           # Global styles
-```
-
-## Technologies Used
-
-- **Vue 3** - The progressive JavaScript framework
-- **TypeScript** - Type-safe JavaScript
-- **Vite** - Next generation frontend tooling
-- **CSS3** - Modern styling with CSS custom properties
-
-## License
-
-This project is private and proprietary.
+[Visual Design Study PDF](VisualDesignStudy.pdf)

@@ -298,11 +298,6 @@ const handleCreateCommunity = async () => {
       throw new Error('User not authenticated')
     }
     
-    console.log('Creating community with data:', {
-      name: createForm.value.name.trim(),
-      description: createForm.value.description.trim(),
-      userId: auth.userId
-    })
     
     await community.createCommunity({
       name: createForm.value.name.trim(),
@@ -312,7 +307,6 @@ const handleCreateCommunity = async () => {
     // Refetch memberships so the user sees themselves as a member
     await community.fetchMemberships()
     
-    console.log('Community created successfully')
     closeCreateForm()
   } catch (error: any) {
     console.error('Failed to create community:', error)
@@ -348,13 +342,6 @@ const handleEditCommunity = async () => {
       throw new Error('No community selected for editing')
     }
 
-    console.log('Updating community with data:', {
-      communityId: communityToEdit.value._id,
-      name: editForm.value.name.trim(),
-      description: editForm.value.description.trim(),
-      userId: auth.userId
-    })
-
     await community.updateCommunityDetails(
       communityToEdit.value._id,
       editForm.value.name.trim(),
@@ -362,7 +349,6 @@ const handleEditCommunity = async () => {
       auth.userId
     )
 
-    console.log('Community updated successfully')
     closeEditForm()
   } catch (error: any) {
     console.error('Failed to update community:', error)
@@ -388,12 +374,6 @@ const formatDate = (dateString: string) => {
 
 // Lifecycle
 onMounted(() => {
-  console.log('Auth state on mount:', {
-    isLoggedIn: auth.isLoggedIn,
-    userId: auth.userId,
-    currentUser: auth.currentUser,
-    isAuthenticated: auth.isAuthenticated
-  })
   community.fetchCommunities()
   community.fetchMemberships()
 })

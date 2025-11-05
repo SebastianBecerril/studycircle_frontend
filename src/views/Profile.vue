@@ -304,7 +304,7 @@
                   <h4 class="class-code">
                     {{ enrollment.courseNumber || enrollment.course }}: {{ enrollment.courseName || 'Unknown Course' }}
                   </h4>
-                  <span class="class-term">{{ enrollment.termName || enrollment.term }}</span>
+                  <span class="class-term">{{ enrollment.termName || 'Unknown Term' }}</span>
                 </div>
                 <p class="class-section">
                   {{ enrollment.sectionType || 'Section' }}
@@ -349,7 +349,7 @@
                     {{ truncate(community.description, 80) }}
                   </p>
                   <div class="community-meta">
-                    <span class="member-count">{{ community.members?.length || 0 }} members</span>
+                    <span class="member-count">{{ community.memberCount }} members</span>
                   </div>
                 </div>
                 <div class="community-arrow">→</div>
@@ -401,12 +401,12 @@ const enrichedEnrollments = computed(() => {
   return myEnrollments.value.map(enrollment => {
     const course = courseCatalog.courses.find(c => c._id === enrollment.course)
     const section = courseCatalog.sections.find(s => s._id === enrollment.section)
-    const term = courseCatalog.terms.find(t => t._id === enrollment.term)
+    const term = course ? courseCatalog.terms.find(t => t._id === course.term) : null
     
     return {
       ...enrollment,
       courseNumber: course?.courseNumber,
-      courseName: course?.courseName, // Fixed: was course?.name
+      courseName: course?.courseName,
       department: course?.department,
       sectionType: section?.classType,
       days: section?.days?.join(', '),
@@ -421,9 +421,15 @@ const enrichedEnrollments = computed(() => {
 
 const myCommunities = computed(() => {
   if (!auth.userId) return []
-  return community.communities.filter(c => 
-    c.members && c.members.includes(auth.userId)
-  )
+  return community.communities.filter(c => {
+    const membership = community.memberships.find(
+      m => m.community === c._id && m.user === auth.userId
+    )
+    return !!membership
+  }).map(c => ({
+    ...c,
+    memberCount: community.memberships.filter(m => m.community === c._id).length
+  }))
 })
 
 // Utility function to truncate text
@@ -493,12 +499,35 @@ const fetchEnrollments = async () => {
     enrollmentsLoading.value = true
     if (auth.userId) {
       // Fetch enrollments and course catalog data
-      await Promise.all([
-        userEnrollments.fetchEnrollmentsByOwner(auth.userId),
-        courseCatalog.fetchAllCourses(),
-        courseCatalog.fetchAllSections(),
-        courseCatalog.fetchAllTerms()
-      ])
+      await userEnrollments.fetchEnrollmentsByOwner(auth.userId)
+      await courseCatalog.fetchAllTerms()
+      
+      // Fetch courses and sections for each enrollment
+      const enrollments = userEnrollments.enrollments.filter(e => e.owner === auth.userId)
+      const uniqueCourseIds = [...new Set(enrollments.map(e => e.course))]
+      const uniqueSectionIds = [...new Set(enrollments.map(e => e.section))]
+      
+      for (const courseId of uniqueCourseIds) {
+        try {
+          await courseCatalog.fetchCourseById(courseId)
+        } catch (err) {
+          // Continue if course fetch fails
+        }
+      }
+      
+      for (const sectionId of uniqueSectionIds) {
+        const enrollment = enrollments.find(e => e.section === sectionId)
+        if (enrollment) {
+          try {
+            const course = courseCatalog.courses.find(c => c._id === enrollment.course)
+            if (course) {
+              await courseCatalog.fetchSectionsByCourse(course._id)
+            }
+          } catch (err) {
+            // Continue if section fetch fails
+          }
+        }
+      }
     }
   } catch (err: any) {
     console.error('Error loading enrollments:', err)
@@ -543,11 +572,7 @@ const handleCreateProfile = async () => {
       return
     }
 
-    console.log('Creating profile with display name:', displayName)
-
     await userProfile.createProfileAction(auth.userId, displayName)
-
-    console.log('Profile created successfully')
     createForm.value = { displayName: '' }
   } catch (error: any) {
     console.error('Failed to create profile:', error)
@@ -576,11 +601,7 @@ const handleUpdateDisplayName = async () => {
       return
     }
 
-    console.log('Updating display name to:', newDisplayName)
-
     await userProfile.updateDisplayNameAction(userProfile.currentProfile._id, newDisplayName)
-
-    console.log('Display name updated successfully')
     closeEditName()
   } catch (error: any) {
     console.error('Failed to update display name:', error)
@@ -599,11 +620,7 @@ const handleUpdateBio = async () => {
 
     const newBio = editBioForm.value.trim()
 
-    console.log('Updating bio to:', newBio)
-
     await userProfile.updateBioAction(userProfile.currentProfile._id, newBio)
-
-    console.log('Bio updated successfully')
     closeEditBio()
   } catch (error: any) {
     console.error('Failed to update bio:', error)
@@ -623,11 +640,7 @@ const handleUpdateAvatar = async () => {
 
     const newAvatarURL = editAvatarForm.value.trim()
 
-    console.log('Updating avatar to:', newAvatarURL)
-
     await userProfile.updateThumbnailAction(userProfile.currentProfile._id, newAvatarURL)
-
-    console.log('Avatar updated successfully')
     closeEditAvatar()
   } catch (error: any) {
     console.error('Failed to update avatar:', error)

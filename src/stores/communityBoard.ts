@@ -138,7 +138,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getPostsByCommunity(communityId)
-      console.log('Fetch posts response:', response)
       // API returns array of posts directly
       setPosts(response || [])
     } catch (err: any) {
@@ -153,7 +152,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getRepliesForPost(postId)
-      console.log('Fetch replies response:', response)
       // API returns array of replies directly
       const newReplies = response || []
       
@@ -181,7 +179,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setError(null)
     try {
       const response = await studyCircleApi.createPost(author, community, title, body, tags, course)
-      console.log('Create post response:', response)
       
       // The API returns { posting: "postId" } or { post: "postId" }
       const postId = response.posting || response.post
@@ -189,7 +186,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
       if (postId) {
         try {
           const fullPost = await studyCircleApi.getPostById(postId)
-          console.log('Full post data:', fullPost)
           
           // The getPostById might return { post: postObject } or { posting: postObject }
           const postData = fullPost.post || fullPost.posting || fullPost
@@ -244,7 +240,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setError(null)
     try {
       const response = await studyCircleApi.replyToPost(postingId, authorId, body)
-      console.log('Create reply response:', response)
       
       // The API returns { reply: "replyId" }
       const replyId = response.reply
@@ -281,7 +276,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setError(null)
     try {
       await studyCircleApi.updatePost(postingId, newTitle, newBody, newTags, newCourse, requesterId)
-      console.log('Post updated successfully')
       
       // Update in store
       updatePost(postingId, {
@@ -301,7 +295,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setError(null)
     try {
       await studyCircleApi.updateReply(replyId, newBody, requesterId)
-      console.log('Reply updated successfully')
       
       // Update in store
       updateReply(replyId, { body: newBody })
@@ -316,7 +309,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setError(null)
     try {
       await studyCircleApi.deletePost(postId, requesterId)
-      console.log('Post deleted successfully')
       
       // Remove from store
       removePost(postId)
@@ -331,7 +323,6 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setError(null)
     try {
       await studyCircleApi.deleteReply(replyId, requesterId)
-      console.log('Reply deleted successfully')
       
       // Remove from store
       removeReply(replyId)
