@@ -10,6 +10,8 @@ const api = axios.create({
   },
 })
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+
 // Request interceptor to add auth token if available
 api.interceptors.request.use(
   (config) => {
