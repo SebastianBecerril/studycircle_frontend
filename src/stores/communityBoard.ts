@@ -294,8 +294,7 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     newTitle: string,
     newBody: string,
     newTags: string[],
-    newCourse: string,
-    requesterId: string
+    newCourse: string
   ) => {
     setError(null)
     try {
@@ -321,7 +320,7 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     }
   }
 
-  const updateReplyAction = async (replyId: string, newBody: string, requesterId: string) => {
+  const updateReplyAction = async (replyId: string, newBody: string) => {
     setError(null)
     try {
       const sessionId = requireSessionId()
@@ -341,7 +340,7 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     }
   }
 
-  const deletePostAction = async (postId: string, requesterId: string) => {
+  const deletePostAction = async (postId: string) => {
     setError(null)
     try {
       const sessionId = requireSessionId()
@@ -361,7 +360,7 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     }
   }
 
-  const deleteReplyAction = async (replyId: string, requesterId: string) => {
+  const deleteReplyAction = async (replyId: string) => {
     setError(null)
     try {
       const sessionId = requireSessionId()

@@ -26,7 +26,7 @@ export const useUserProfileStore = defineStore('userProfile', () => {
   const thumbnailImageURL = computed(() => currentProfile.value?.thumbnailImageURL || '')
 
   // Actions
-  const setCurrentProfile = (profile: UserProfile) => {
+  const setCurrentProfile = (profile: UserProfile | null) => {
     currentProfile.value = profile
   }
 
