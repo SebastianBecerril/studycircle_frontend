@@ -1211,17 +1211,18 @@ const handleDeleteReply = async () => {
   }
 }
 
+// Fetch data on mount (communities and memberships are public, posts require auth)
 onMounted(async () => {
   try {
     isLoading.value = true
     error.value = ''
     
-    // Fetch communities if not already loaded
+    // Fetch communities if not already loaded (public endpoint)
     if (community.communities.length === 0) {
       await community.fetchCommunities()
     }
     
-    // Fetch memberships
+    // Fetch memberships (public endpoint)
     await community.fetchMemberships()
     
     // Check if community exists
@@ -1230,7 +1231,7 @@ onMounted(async () => {
       return
     }
 
-    // Fetch posts for this community
+    // Fetch posts for this community (requires auth)
     await communityBoard.fetchPostsByCommunity(communityId.value)
     
   } catch (err: any) {

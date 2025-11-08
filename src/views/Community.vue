@@ -302,7 +302,7 @@ const handleCreateCommunity = async () => {
     await community.createCommunity({
       name: createForm.value.name.trim(),
       description: createForm.value.description.trim()
-    }, auth.userId)
+    })
     
     // Refetch memberships so the user sees themselves as a member
     await community.fetchMemberships()
@@ -345,8 +345,7 @@ const handleEditCommunity = async () => {
     await community.updateCommunityDetails(
       communityToEdit.value._id,
       editForm.value.name.trim(),
-      editForm.value.description.trim(),
-      auth.userId
+      editForm.value.description.trim()
     )
 
     closeEditForm()
@@ -373,6 +372,7 @@ const formatDate = (dateString: string) => {
 }
 
 // Lifecycle
+// Fetch communities and memberships on mount (no auth required - public endpoints)
 onMounted(() => {
   community.fetchCommunities()
   community.fetchMemberships()

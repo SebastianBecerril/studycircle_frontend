@@ -65,28 +65,28 @@ export const studyCircleApi = {
   },
 
   // UserProfile APIs
-  async createProfile(user: string, displayName: string) {
-    const response = await api.post('/UserProfile/createProfile', { user, displayName })
+  async createProfile(session: string, displayName: string) {
+    const response = await api.post('/api/UserProfile/createProfile', { session, displayName })
     return response.data
   },
 
-  async updateDisplayName(profile: string, newDisplayName: string) {
-    const response = await api.post('/UserProfile/updateDisplayName', { profile, newDisplayName })
+  async updateDisplayName(session: string, profile: string, newDisplayName: string) {
+    const response = await api.post('/api/UserProfile/updateDisplayName', { session, profile, newDisplayName })
     return response.data
   },
 
-  async updateBio(profile: string, newBio: string) {
-    const response = await api.post('/UserProfile/updateBio', { profile, newBio })
+  async updateBio(session: string, profile: string, newBio: string) {
+    const response = await api.post('/api/UserProfile/updateBio', { session, profile, newBio })
     return response.data
   },
 
-  async updateThumbnailImage(profile: string, newThumbnailImageURL: string) {
-    const response = await api.post('/UserProfile/updateThumbnailImage', { profile, newThumbnailImageURL })
+  async updateThumbnailImage(session: string, profile: string, newThumbnailImageURL: string) {
+    const response = await api.post('/api/UserProfile/updateThumbnailImage', { session, profile, newThumbnailImageURL })
     return response.data
   },
 
-  async deleteProfile(profile: string) {
-    const response = await api.post('/UserProfile/deleteProfile', { profile })
+  async deleteProfile(session: string, profile: string) {
+    const response = await api.post('/api/UserProfile/deleteProfile', { session, profile })
     return response.data
   },
 
@@ -101,70 +101,96 @@ export const studyCircleApi = {
   },
 
   // Community APIs
-  async createCommunity(name: string, description: string, creator: string) {
-    const response = await api.post('/Community/createCommunity', { name, description, creator })
+  async createCommunity(session: string, name: string, description: string, creator?: string) {
+    const payload: Record<string, unknown> = { session, name, description }
+    if (creator) {
+      payload.creator = creator
+    }
+    const response = await api.post('/Community/createCommunity', payload)
     return response.data
   },
 
-  async updateCommunityDetails(community: string, newName: string, newDescription: string, requester: string) {
-    const response = await api.post('/Community/updateCommunityDetails', { community, newName, newDescription, requester })
+  async updateCommunityDetails(session: string, community: string, newName: string, newDescription: string, requester?: string) {
+    const payload: Record<string, unknown> = { session, community, newName, newDescription }
+    if (requester) {
+      payload.requester = requester
+    }
+    const response = await api.post('/Community/updateCommunityDetails', payload)
     return response.data
   },
 
-  async addMember(community: string, user: string, inviter: string) {
-    const response = await api.post('/Community/addMember', { community, user, inviter })
+  async addMember(session: string, community: string, user: string, inviter?: string) {
+    const payload: Record<string, unknown> = { session, community, user }
+    if (inviter) {
+      payload.inviter = inviter
+    }
+    const response = await api.post('/Community/addMember', payload)
     return response.data
   },
 
-  async removeMember(community: string, user: string, requester: string) {
-    const response = await api.post('/Community/removeMember', { community, user, requester })
+  async removeMember(session: string, community: string, user: string, requester?: string) {
+    const payload: Record<string, unknown> = { session, community, user }
+    if (requester) {
+      payload.requester = requester
+    }
+    const response = await api.post('/Community/removeMember', payload)
     return response.data
   },
 
-  async setMemberRole(membership: string, newRole: string, requester: string) {
-    const response = await api.post('/Community/setMemberRole', { membership, newRole, requester })
+  async setMemberRole(session: string, membership: string, newRole: string, requester?: string) {
+    const payload: Record<string, unknown> = { session, membership, newRole }
+    if (requester) {
+      payload.requester = requester
+    }
+    const response = await api.post('/Community/setMemberRole', payload)
     return response.data
   },
 
-  async deleteCommunity(community: string, requester: string) {
-    const response = await api.post('/Community/deleteCommunity', { community, requester })
+  async deleteCommunity(session: string, community: string, requester?: string) {
+    const payload: Record<string, unknown> = { session, community }
+    if (requester) {
+      payload.requester = requester
+    }
+    const response = await api.post('/Community/deleteCommunity', payload)
     return response.data
   },
 
-  async getCommunityById(community: string) {
-    const response = await api.post('/Community/_getCommunityById', { community })
+  async getCommunityById(session: string, community: string) {
+    const response = await api.post('/Community/_getCommunityById', { session, community })
     return response.data
   },
 
-  async getMembershipById(membership: string) {
-    const response = await api.post('/Community/_getMembershipById', { membership })
+  async getMembershipById(session: string, membership: string) {
+    const response = await api.post('/Community/_getMembershipById', { session, membership })
     return response.data
   },
 
-  async getMembershipsByCommunity(community: string) {
-    const response = await api.post('/Community/_getMembershipsByCommunity', { community })
+  async getMembershipsByCommunity(session: string, community: string) {
+    const response = await api.post('/Community/_getMembershipsByCommunity', { session, community })
     return response.data
   },
 
-  async getMembershipsByUser(user: string) {
-    const response = await api.post('/Community/_getMembershipsByUser', { user })
+  async getMembershipsByUser(session: string, user: string) {
+    const response = await api.post('/Community/_getMembershipsByUser', { session, user })
     return response.data
   },
 
   // Join/Leave Community methods
-  async joinCommunity(communityId: string, userId: string) {
-    const response = await api.post('/Community/addMember', { 
-      community: communityId, 
-      user: userId, 
-      inviter: userId // User joins themselves
+  async joinCommunity(session: string, communityId: string, userId: string, inviterId?: string) {
+    const response = await api.post('/Community/addMember', {
+      session,
+      community: communityId,
+      user: userId,
+      inviter: inviterId || userId // Default to self-invite for self-join
     })
     return response.data
   },
 
-  async leaveCommunity(communityId: string, userId: string) {
-    const response = await api.post('/Community/removeMember', { 
-      community: communityId, 
-      user: userId, 
+  async leaveCommunity(session: string, communityId: string, userId: string) {
+    const response = await api.post('/Community/removeMember', {
+      session,
+      community: communityId,
+      user: userId,
       requester: userId // User removes themselves
     })
     return response.data
@@ -186,33 +212,33 @@ export const studyCircleApi = {
   },
 
   // CommunityBoard APIs
-  async createPost(author: string, community: string, title: string, body: string, tags: string[], course: string) {
-    const response = await api.post('/CommunityBoard/createPost', { author, community, title, body, tags, course })
+  async createPost(session: string, community: string, title: string, body: string, tags: string[], course: string) {
+    const response = await api.post('/api/CommunityBoard/createPost', { session, community, title, body, tags, course })
     return response.data
   },
 
-  async updatePost(posting: string, newTitle: string, newBody: string, newTags: string[], newCourse: string, requester: string) {
-    const response = await api.post('/CommunityBoard/updatePost', { posting, newTitle, newBody, newTags, newCourse, requester })
+  async updatePost(session: string, posting: string, newTitle: string, newBody: string, newTags: string[], newCourse: string) {
+    const response = await api.post('/api/CommunityBoard/updatePost', { session, posting, newTitle, newBody, newTags, newCourse })
     return response.data
   },
 
-  async replyToPost(posting: string, author: string, body: string) {
-    const response = await api.post('/CommunityBoard/replyToPost', { posting, author, body })
+  async replyToPost(session: string, posting: string, body: string) {
+    const response = await api.post('/api/CommunityBoard/replyToPost', { session, posting, body })
     return response.data
   },
 
-  async updateReply(reply: string, newBody: string, requester: string) {
-    const response = await api.post('/CommunityBoard/updateReply', { reply, newBody, requester })
+  async updateReply(session: string, reply: string, newBody: string) {
+    const response = await api.post('/api/CommunityBoard/updateReply', { session, reply, newBody })
     return response.data
   },
 
-  async deletePost(posting: string, requester: string) {
-    const response = await api.post('/CommunityBoard/deletePost', { posting, requester })
+  async deletePost(session: string, posting: string) {
+    const response = await api.post('/api/CommunityBoard/deletePost', { session, posting })
     return response.data
   },
 
-  async deleteReply(reply: string, requester: string) {
-    const response = await api.post('/CommunityBoard/deleteReply', { reply, requester })
+  async deleteReply(session: string, reply: string) {
+    const response = await api.post('/api/CommunityBoard/deleteReply', { session, reply })
     return response.data
   },
 
@@ -232,48 +258,48 @@ export const studyCircleApi = {
   },
 
   // CourseCatalog APIs
-  async createOrGetTerm(name: string) {
-    const response = await api.post('/CourseCatalog/createOrGetTerm', { name })
+  async createOrGetTerm(sessionId: string, name: string) {
+    const response = await api.post('/api/CourseCatalog/createOrGetTerm', { sessionId, name })
     return response.data
   },
 
-  async updateTermName(term: string, newName: string) {
-    const response = await api.post('/CourseCatalog/updateTermName', { term, newName })
+  async updateTermName(sessionId: string, term: string, newName: string) {
+    const response = await api.post('/api/CourseCatalog/updateTermName', { sessionId, term, newName })
     return response.data
   },
 
-  async deleteTerm(term: string) {
-    const response = await api.post('/CourseCatalog/deleteTerm', { term })
+  async deleteTerm(sessionId: string, term: string) {
+    const response = await api.post('/api/CourseCatalog/deleteTerm', { sessionId, term })
     return response.data
   },
 
-  async createOrGetCourse(term: string, courseNumber: string, courseName: string, department: string) {
-    const response = await api.post('/CourseCatalog/createOrGetCourse', { term, courseNumber, courseName, department })
+  async createOrGetCourse(sessionId: string, term: string, courseNumber: string, courseName: string, department: string) {
+    const response = await api.post('/api/CourseCatalog/createOrGetCourse', { sessionId, term, courseNumber, courseName, department })
     return response.data
   },
 
-  async updateCourseDetails(course: string, newCourseNumber: string, newCourseName: string, newDepartment: string) {
-    const response = await api.post('/CourseCatalog/updateCourseDetails', { course, newCourseNumber, newCourseName, newDepartment })
+  async updateCourseDetails(sessionId: string, course: string, newCourseNumber: string, newCourseName: string, newDepartment: string) {
+    const response = await api.post('/api/CourseCatalog/updateCourseDetails', { sessionId, course, newCourseNumber, newCourseName, newDepartment })
     return response.data
   },
 
-  async deleteCourse(course: string) {
-    const response = await api.post('/CourseCatalog/deleteCourse', { course })
+  async deleteCourse(sessionId: string, course: string) {
+    const response = await api.post('/api/CourseCatalog/deleteCourse', { sessionId, course })
     return response.data
   },
 
-  async createOrGetSection(course: string, classType: string, days: string[], startTime: string, endTime: string, location: string, instructor: string) {
-    const response = await api.post('/CourseCatalog/createOrGetSection', { course, classType, days, startTime, endTime, location, instructor })
+  async createOrGetSection(sessionId: string, course: string, classType: string, days: string[], startTime: string, endTime: string, location: string, instructor: string) {
+    const response = await api.post('/api/CourseCatalog/createOrGetSection', { sessionId, course, classType, days, startTime, endTime, location, instructor })
     return response.data
   },
 
-  async updateSectionDetails(section: string, newClassType: string, newDays: string[], newStartTime: string, newEndTime: string, newLocation: string, newInstructor: string) {
-    const response = await api.post('/CourseCatalog/updateSectionDetails', { section, newClassType, newDays, newStartTime, newEndTime, newLocation, newInstructor })
+  async updateSectionDetails(sessionId: string, section: string, newClassType: string, newDays: string[], newStartTime: string, newEndTime: string, newLocation: string, newInstructor: string) {
+    const response = await api.post('/api/CourseCatalog/updateSectionDetails', { sessionId, section, newClassType, newDays, newStartTime, newEndTime, newLocation, newInstructor })
     return response.data
   },
 
-  async deleteSection(section: string) {
-    const response = await api.post('/CourseCatalog/deleteSection', { section })
+  async deleteSection(sessionId: string, section: string) {
+    const response = await api.post('/api/CourseCatalog/deleteSection', { sessionId, section })
     return response.data
   },
 
@@ -318,25 +344,26 @@ export const studyCircleApi = {
   },
 
   // UserEnrollments APIs
-  async addEnrollment(owner: string, course: string, section: string, visibility: boolean) {
-    const response = await api.post('/UserEnrollments/addEnrollment', { owner, course, section, visibility })
+  async addEnrollment(sessionId: string, course: string, section: string, visibility: boolean) {
+    const response = await api.post('/UserEnrollments/addEnrollment', { sessionId, course, section, visibility })
     return response.data
   },
 
-  async updateCourseSection(enrollment: string, newSection: string) {
-    const response = await api.post('/UserEnrollments/updateCourseSection', { enrollment, newSection })
+  async updateCourseSection(sessionId: string, enrollment: string, newSection: string) {
+    const response = await api.post('/UserEnrollments/updateCourseSection', { sessionId, enrollment, newSection })
     return response.data
   },
 
-  async setEnrollmentVisibility(enrollment: string, newVisibility: boolean) {
-    const response = await api.post('/UserEnrollments/setEnrollmentVisibility', { enrollment, newVisibility })
+  async setEnrollmentVisibility(sessionId: string, enrollment: string, newVisibility: boolean) {
+    const response = await api.post('/UserEnrollments/setEnrollmentVisibility', { sessionId, enrollment, newVisibility })
     return response.data
   },
 
-  async removeEnrollment(enrollment: string) {
-    const response = await api.post('/UserEnrollments/removeEnrollment', { enrollment })
+  async removeEnrollment(sessionId: string, enrollment: string) {
+    const response = await api.post('/UserEnrollments/removeEnrollment', { sessionId, enrollment })
     return response.data
   },
+
 
   async getEnrollmentById(enrollment: string) {
     const response = await api.post('/UserEnrollments/_getEnrollmentById', { enrollment })

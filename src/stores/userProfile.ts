@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { studyCircleApi } from '@/services/studyCircleApi'
+import { useAuthStore } from './auth'
 
 export interface UserProfile {
   _id: string
@@ -16,6 +17,7 @@ export const useUserProfileStore = defineStore('userProfile', () => {
   const profiles = ref<UserProfile[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const auth = useAuthStore()
 
   // Getters
   const hasProfile = computed(() => currentProfile.value !== null)
@@ -70,6 +72,16 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     error.value = null
   }
 
+  const requireSessionId = () => {
+    const sessionId = auth.currentSession?.sessionId
+    if (!sessionId) {
+      const message = 'You must be logged in to perform this action'
+      setError(message)
+      throw new Error(message)
+    }
+    return sessionId
+  }
+
   // API Actions
   const fetchProfileByUser = async (userId: string) => {
     setLoading(true)
@@ -113,7 +125,13 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await studyCircleApi.createProfile(userId, displayName)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.createProfile(sessionId, displayName)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       const profileId = response.profile
       
@@ -146,7 +164,13 @@ export const useUserProfileStore = defineStore('userProfile', () => {
   const updateDisplayNameAction = async (profileId: string, newDisplayName: string) => {
     setError(null)
     try {
-      await studyCircleApi.updateDisplayName(profileId, newDisplayName)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.updateDisplayName(sessionId, profileId, newDisplayName)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // Update in store
       updateProfile(profileId, { displayName: newDisplayName })
@@ -160,7 +184,13 @@ export const useUserProfileStore = defineStore('userProfile', () => {
   const updateBioAction = async (profileId: string, newBio: string) => {
     setError(null)
     try {
-      await studyCircleApi.updateBio(profileId, newBio)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.updateBio(sessionId, profileId, newBio)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // Update in store
       updateProfile(profileId, { bio: newBio })
@@ -174,7 +204,13 @@ export const useUserProfileStore = defineStore('userProfile', () => {
   const updateThumbnailAction = async (profileId: string, newThumbnailImageURL: string) => {
     setError(null)
     try {
-      await studyCircleApi.updateThumbnailImage(profileId, newThumbnailImageURL)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.updateThumbnailImage(sessionId, profileId, newThumbnailImageURL)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // Update in store
       updateProfile(profileId, { thumbnailImageURL: newThumbnailImageURL })

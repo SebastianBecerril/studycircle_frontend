@@ -26,10 +26,10 @@ export const useCommunityStore = defineStore('community', () => {
   const currentCommunity = ref<Community | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const auth = useAuthStore()
 
   // Getters
   const userCommunities = computed(() => {
-    const auth = useAuthStore()
     const userId = auth.userId
     if (!userId) return []
     const userMemberships = memberships.value.filter(m => m.user === userId)
@@ -39,7 +39,6 @@ export const useCommunityStore = defineStore('community', () => {
   })
 
   const adminCommunities = computed(() => {
-    const auth = useAuthStore()
     const userId = auth.userId
     if (!userId) return []
     const adminMemberships = memberships.value.filter(m => 
@@ -55,7 +54,6 @@ export const useCommunityStore = defineStore('community', () => {
   })
 
   const isUserAdmin = computed(() => (communityId: string) => {
-    const auth = useAuthStore()
     const userId = auth.userId
     if (!userId) return false
     const membership = memberships.value.find(m => 
@@ -124,14 +122,25 @@ export const useCommunityStore = defineStore('community', () => {
     error.value = errorMessage
   }
 
+  const requireSessionId = () => {
+    const sessionId = auth.currentSession?.sessionId
+    if (!sessionId) {
+      const message = 'You must be logged in to perform this action'
+      setError(message)
+      throw new Error(message)
+    }
+    return sessionId
+  }
+
   // API Actions
   const fetchCommunities = async () => {
     setLoading(true)
     setError(null)
     try {
       const response = await studyCircleApi.getAllCommunities()
-      // The API returns an array of communities directly
-      setCommunities(response || [])
+      // The API may return either an array or an object containing the array
+      const communityList = Array.isArray(response) ? response : response?.communities || []
+      setCommunities(communityList)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to fetch communities')
       console.error('Error fetching communities:', err)
@@ -144,25 +153,41 @@ export const useCommunityStore = defineStore('community', () => {
     setError(null)
     try {
       const response = await studyCircleApi.getAllMemberships()
-      // The API returns an array of memberships directly
-      setMemberships(response || [])
+      // The API may return either an array or an object containing the array
+      const membershipList = Array.isArray(response)
+        ? response
+        : response?.memberships ||
+          response?.data?.memberships ||
+          []
+      setMemberships(membershipList)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to fetch memberships')
       console.error('Error fetching memberships:', err)
     }
   }
 
-  const createCommunity = async (communityData: { name: string; description: string }, creatorId: string) => {
+  const createCommunity = async (communityData: { name: string; description: string }) => {
     setLoading(true)
     setError(null)
     try {
-      const response = await studyCircleApi.createCommunity(communityData.name, communityData.description, creatorId)
+      const sessionId = requireSessionId()
+      const creatorId = auth.userId
+      if (!creatorId) {
+        throw new Error('You must be logged in to create a community')
+      }
+      const response = await studyCircleApi.createCommunity(sessionId, communityData.name, communityData.description, creatorId)
+
+      if (!response || response.error) {
+        const message = response?.error || 'Failed to create community'
+        setError(message)
+        throw new Error(message)
+      }
       
       // The API returns { community: "string (ID)" }, so we need to fetch the full community data
       if (response.community) {
         try {
           // Fetch the full community data
-          const fullCommunity = await studyCircleApi.getCommunityById(response.community)
+          const fullCommunity = await studyCircleApi.getCommunityById(sessionId, response.community)
           
           // Check if the response has the expected structure
           if (fullCommunity && fullCommunity.community) {
@@ -209,7 +234,18 @@ export const useCommunityStore = defineStore('community', () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await studyCircleApi.joinCommunity(communityId, userId)
+      const sessionId = requireSessionId()
+      const inviterId = auth.userId
+      if (!inviterId) {
+        throw new Error('You must be logged in to add members')
+      }
+      const response = await studyCircleApi.joinCommunity(sessionId, communityId, userId, inviterId)
+
+      if (!response || response.error) {
+        const message = response?.error || 'Failed to join community'
+        setError(message)
+        throw new Error(message)
+      }
       
       // Create a membership object for the local state
       const membership: Membership = {
@@ -244,7 +280,14 @@ export const useCommunityStore = defineStore('community', () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await studyCircleApi.leaveCommunity(communityId, userId)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.leaveCommunity(sessionId, communityId, userId)
+
+      if (!response || response.error) {
+        const message = response?.error || 'Failed to leave community'
+        setError(message)
+        throw new Error(message)
+      }
       // Find and remove the membership
       const membership = memberships.value.find(m => 
         m.community === communityId && m.user === userId
@@ -265,13 +308,23 @@ export const useCommunityStore = defineStore('community', () => {
   const updateCommunityDetails = async (
     communityId: string, 
     newName: string, 
-    newDescription: string, 
-    requesterId: string
+    newDescription: string
   ) => {
     setLoading(true)
     setError(null)
     try {
-      await studyCircleApi.updateCommunityDetails(communityId, newName, newDescription, requesterId)
+      const sessionId = requireSessionId()
+      const requesterId = auth.userId
+      if (!requesterId) {
+        throw new Error('You must be logged in to update a community')
+      }
+      const response = await studyCircleApi.updateCommunityDetails(sessionId, communityId, newName, newDescription, requesterId)
+
+      if (!response || response.error) {
+        const message = response?.error || 'Failed to update community'
+        setError(message)
+        throw new Error(message)
+      }
       
       // Update in store
       updateCommunity(communityId, {

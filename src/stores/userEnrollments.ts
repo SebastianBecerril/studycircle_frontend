@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { studyCircleApi } from '@/services/studyCircleApi'
+import { useAuthStore } from './auth'
 
 export interface Enrollment {
   _id: string
@@ -15,6 +16,7 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
   const enrollments = ref<Enrollment[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const auth = useAuthStore()
 
   // Getters
   const userEnrollments = computed(() => (userId: string) => {
@@ -93,7 +95,52 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     error.value = null
   }
 
+  const requireSessionId = () => {
+    const sessionId = auth.currentSession?.sessionId
+    if (!sessionId) {
+      const message = 'You must be logged in to perform this action'
+      setError(message)
+      throw new Error(message)
+    }
+    return sessionId
+  }
+
   // API Actions
+  const fetchMyEnrollments = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const userId = auth.userId
+      if (!userId) {
+        throw new Error('You must be logged in to view your enrollments')
+      }
+      const response = await studyCircleApi.getEnrollmentsByOwner(userId)
+      setEnrollments(response || [])
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch enrollments')
+      console.error('Error fetching enrollments:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchVisibleEnrollmentsForUser = async (userId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await studyCircleApi.getEnrollmentsByOwner(userId)
+      // Filter for visible enrollments only
+      const visibleEnrollments = (response || []).filter((e: Enrollment) => e.visibility)
+      setEnrollments(visibleEnrollments)
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch enrollments')
+      console.error('Error fetching enrollments:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Legacy method - kept for backwards compatibility if needed
   const fetchEnrollmentsByOwner = async (userId: string) => {
     setLoading(true)
     setError(null)
@@ -108,7 +155,28 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     }
   }
 
-  // Fetch and merge enrollments (doesn't replace existing ones)
+  // Fetch and merge visible enrollments for a user (filters by visibility)
+  const fetchAndMergeVisibleEnrollmentsForUser = async (userId: string) => {
+    setError(null)
+    try {
+      const response = await studyCircleApi.getEnrollmentsByOwner(userId)
+      
+      // Filter for visible enrollments and merge
+      const visibleEnrollments = (response || []).filter((e: Enrollment) => e.visibility)
+      
+      visibleEnrollments.forEach((enrollment: Enrollment) => {
+        // Only add if not already present
+        if (!enrollments.value.find(e => e._id === enrollment._id)) {
+          addEnrollment(enrollment)
+        }
+      })
+    } catch (err: any) {
+      console.warn(`Failed to fetch enrollments for user ${userId}:`, err)
+      // Don't throw - we want to continue with other users
+    }
+  }
+
+  // Legacy method - kept for backwards compatibility if needed
   const fetchAndMergeEnrollmentsByOwner = async (userId: string) => {
     setError(null)
     try {
@@ -137,7 +205,13 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await studyCircleApi.addEnrollment(owner, course, section, visibility)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.addEnrollment(sessionId, course, section, visibility)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       const enrollmentId = response.enrollment
       
@@ -167,7 +241,14 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     setLoading(true)
     setError(null)
     try {
-      await studyCircleApi.removeEnrollment(enrollmentId)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.removeEnrollment(sessionId, enrollmentId)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
+      
       removeEnrollment(enrollmentId)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to delete enrollment')
@@ -181,7 +262,14 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
   const toggleEnrollmentVisibility = async (enrollmentId: string, newVisibility: boolean) => {
     setError(null)
     try {
-      await studyCircleApi.setEnrollmentVisibility(enrollmentId, newVisibility)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.setEnrollmentVisibility(sessionId, enrollmentId, newVisibility)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
+      
       updateEnrollmentVisibility(enrollmentId, newVisibility)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to update visibility')
@@ -193,7 +281,14 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
   const changeCourseSection = async (enrollmentId: string, newSectionId: string) => {
     setError(null)
     try {
-      await studyCircleApi.updateCourseSection(enrollmentId, newSectionId)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.updateCourseSection(sessionId, enrollmentId, newSectionId)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
+      
       updateEnrollmentSection(enrollmentId, newSectionId)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to update section')
@@ -230,6 +325,9 @@ export const useUserEnrollmentsStore = defineStore('userEnrollments', () => {
     clearError,
     
     // API Actions
+    fetchMyEnrollments,
+    fetchVisibleEnrollmentsForUser,
+    fetchAndMergeVisibleEnrollmentsForUser,
     fetchEnrollmentsByOwner,
     fetchAndMergeEnrollmentsByOwner,
     createEnrollment,

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { studyCircleApi } from '@/services/studyCircleApi'
+import { useAuthStore } from './auth'
 
 export interface Term {
   _id: string
@@ -35,6 +36,7 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
   const currentCourse = ref<Course | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const auth = useAuthStore()
 
   // Getters
   const coursesByTerm = computed(() => (termId: string) => {
@@ -163,6 +165,16 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
     error.value = null
   }
 
+  const requireSessionId = () => {
+    const sessionId = auth.currentSession?.sessionId
+    if (!sessionId) {
+      const message = 'You must be logged in to perform this action'
+      setError(message)
+      throw new Error(message)
+    }
+    return sessionId
+  }
+
   // API Actions
   const fetchAllTerms = async () => {
     setError(null)
@@ -238,7 +250,14 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
   const createOrGetTermAction = async (name: string) => {
     setError(null)
     try {
-      const response = await studyCircleApi.createOrGetTerm(name)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.createOrGetTerm(sessionId, name)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
+      
       const termId = response.term
       
       if (!termId) {
@@ -266,7 +285,14 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
   ) => {
     setError(null)
     try {
-      const response = await studyCircleApi.createOrGetCourse(termId, courseNumber, courseName, department)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.createOrGetCourse(sessionId, termId, courseNumber, courseName, department)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
+      
       const courseId = response.course
       
       if (!courseId) {
@@ -303,7 +329,9 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
   ) => {
     setError(null)
     try {
+      const sessionId = requireSessionId()
       const response = await studyCircleApi.createOrGetSection(
+        sessionId,
         courseId,
         classType,
         days,
@@ -312,6 +340,12 @@ export const useCourseCatalogStore = defineStore('courseCatalog', () => {
         location,
         instructor
       )
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
+      
       const sectionId = response.section
       
       if (!sectionId) {

@@ -399,8 +399,8 @@ const fetchData = async () => {
       return
     }
 
-    // Fetch user's enrollments
-    await userEnrollments.fetchEnrollmentsByOwner(auth.userId)
+    // Fetch user's enrollments (use authenticated route for own enrollments)
+    await userEnrollments.fetchMyEnrollments()
 
     // Fetch course and section details for each enrollment
     const enrollmentsList = userEnrollments.userEnrollments(auth.userId)

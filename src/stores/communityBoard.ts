@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { studyCircleApi } from '@/services/studyCircleApi'
+import { useAuthStore } from './auth'
 
 export interface Post {
   _id: string
@@ -27,6 +28,7 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
   const currentPost = ref<Post | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const auth = useAuthStore()
 
   // Getters
   const postsByCommunity = computed(() => (communityId: string) => {
@@ -132,6 +134,16 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     error.value = null
   }
 
+  const requireSessionId = () => {
+    const sessionId = auth.currentSession?.sessionId
+    if (!sessionId) {
+      const message = 'You must be logged in to perform this action'
+      setError(message)
+      throw new Error(message)
+    }
+    return sessionId
+  }
+
   // API Actions
   const fetchPostsByCommunity = async (communityId: string) => {
     setLoading(true)
@@ -178,7 +190,13 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await studyCircleApi.createPost(author, community, title, body, tags, course)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.createPost(sessionId, community, title, body, tags, course)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // The API returns { posting: "postId" } or { post: "postId" }
       const postId = response.posting || response.post
@@ -239,7 +257,13 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
   const createReply = async (postingId: string, authorId: string, body: string) => {
     setError(null)
     try {
-      const response = await studyCircleApi.replyToPost(postingId, authorId, body)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.replyToPost(sessionId, postingId, body)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // The API returns { reply: "replyId" }
       const replyId = response.reply
@@ -275,7 +299,13 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
   ) => {
     setError(null)
     try {
-      await studyCircleApi.updatePost(postingId, newTitle, newBody, newTags, newCourse, requesterId)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.updatePost(sessionId, postingId, newTitle, newBody, newTags, newCourse)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // Update in store
       updatePost(postingId, {
@@ -294,7 +324,13 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
   const updateReplyAction = async (replyId: string, newBody: string, requesterId: string) => {
     setError(null)
     try {
-      await studyCircleApi.updateReply(replyId, newBody, requesterId)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.updateReply(sessionId, replyId, newBody)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // Update in store
       updateReply(replyId, { body: newBody })
@@ -308,7 +344,13 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
   const deletePostAction = async (postId: string, requesterId: string) => {
     setError(null)
     try {
-      await studyCircleApi.deletePost(postId, requesterId)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.deletePost(sessionId, postId)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // Remove from store
       removePost(postId)
@@ -322,7 +364,13 @@ export const useCommunityBoardStore = defineStore('communityBoard', () => {
   const deleteReplyAction = async (replyId: string, requesterId: string) => {
     setError(null)
     try {
-      await studyCircleApi.deleteReply(replyId, requesterId)
+      const sessionId = requireSessionId()
+      const response = await studyCircleApi.deleteReply(sessionId, replyId)
+      
+      if (response.error) {
+        setError(response.error)
+        throw new Error(response.error)
+      }
       
       // Remove from store
       removeReply(replyId)

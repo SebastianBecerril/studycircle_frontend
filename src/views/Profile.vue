@@ -498,8 +498,8 @@ const fetchEnrollments = async () => {
   try {
     enrollmentsLoading.value = true
     if (auth.userId) {
-      // Fetch enrollments and course catalog data
-      await userEnrollments.fetchEnrollmentsByOwner(auth.userId)
+      // Fetch enrollments and course catalog data (use authenticated route for own enrollments)
+      await userEnrollments.fetchMyEnrollments()
       await courseCatalog.fetchAllTerms()
       
       // Fetch courses and sections for each enrollment

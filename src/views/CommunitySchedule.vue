@@ -794,10 +794,10 @@ const fetchData = async () => {
       // Clear existing enrollments first to avoid stale data
       userEnrollments.clearEnrollments()
       
-      // Fetch enrollments for each community member
-      // Using fetchAndMergeEnrollmentsByOwner to accumulate all enrollments
+      // Fetch visible enrollments for each community member (authenticated)
+      // Using fetchAndMergeVisibleEnrollmentsForUser to accumulate all visible enrollments
       const fetchPromises = communityMemberIds.value.map(memberId => 
-        userEnrollments.fetchAndMergeEnrollmentsByOwner(memberId)
+        userEnrollments.fetchAndMergeVisibleEnrollmentsForUser(memberId)
       )
       
       // Wait for all fetches to complete
@@ -837,6 +837,7 @@ const fetchData = async () => {
   }
 }
 
+// Fetch data on mount (communities and memberships are public)
 onMounted(() => {
   fetchData()
 })
